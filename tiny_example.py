@@ -41,12 +41,12 @@ def attempt():
     theta = np.pi * np.round(np.random.uniform(-1, 1), 2)
     print(translation, theta)
 
-    error = 0.03 * np.random.uniform(-1, 1, (len(q_pts), 2))
+    error = 0.3 * np.random.uniform(-1, 1, (len(q_pts), 2))
     q_pts = q_pts + translation
     rotmat = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
     # q_pts = np.matmul(q_pts, rotmat)
     q_pts = q_pts + error
-    find_clique(q_pts, k_pts)
+    find_clique(q_pts, k_pts, delta=0.3)
 
 
 def main():
