@@ -39,11 +39,10 @@ static constexpr u32 NUM_POINTS = 384; /* technically 1024 */
     (std::hypot((a1) - (a2), std::hypot((b1) - (b2), (c1) - (c2))))
 
 #define ANGLE_COMPARE(a1, a2, b1, b2, c1, c2) \
-    EUCDIST_ANGLE((a1), (a2), (b1), (b2), (c1), (c2)); \
-    printf("%lf, %lf, %lf -- %lf, %lf, %lf\n", (a1), (b1), (c1), (a2), (b2), (c2));
+    EUCDIST_ANGLE((a1), (a2), (b1), (b2), (c1), (c2));
 
 #define SIDE_RATIO(a1, a2, b1, b2, c1, c2) \
-    (((a2) / (a1) + (b2) / (b1) + (c2) / (c1)) / 3)
+    (((a2) / (a1) + (b2) / (b1) + (c2) / (c1)) / 3);
 
 #define NUM_THREADS 12
 
@@ -353,54 +352,36 @@ ndarray<u8> graph_edges2(ndarray<double> q_pts, ndarray<double> k_pts,
                     qt[ix].compare(kt[iy], check, delta);
                     if (check[0]) {
                         kt[iy].coeff_return0(i2, j2, k2);
-                        printf("0 (%lf, %lf) -- (%lf, %lf)  ", q[i1].x, q[i1].y, k[i2].x, k[i2].y);
-                        printf("(%lf, %lf) -- (%lf, %lf)  ", q[j1].x, q[j1].y, k[j2].x, k[j2].y);
-                        printf("(%lf, %lf) -- (%lf, %lf)\n", q[k1].x, q[k1].y, k[k2].x, k[k2].y);
                         ADD_ADJMAT_EDGE(i1, i2, j1, j2);
                         ADD_ADJMAT_EDGE(j1, j2, k1, k2);
                         ADD_ADJMAT_EDGE(i1, i2, k1, k2);
                     }
                     if (check[1]) {
                         kt[iy].coeff_return1(i2, j2, k2);
-                        printf("1 (%lf, %lf) -- (%lf, %lf)  ", q[i1].x, q[i1].y, k[i2].x, k[i2].y);
-                        printf("(%lf, %lf) -- (%lf, %lf)  ", q[j1].x, q[j1].y, k[j2].x, k[j2].y);
-                        printf("(%lf, %lf) -- (%lf, %lf)\n", q[k1].x, q[k1].y, k[k2].x, k[k2].y);
                         ADD_ADJMAT_EDGE(i1, i2, j1, j2);
                         ADD_ADJMAT_EDGE(j1, j2, k1, k2);
                         ADD_ADJMAT_EDGE(i1, i2, k1, k2);
                     }
                     if (check[2]) {
                         kt[iy].coeff_return2(i2, j2, k2);
-                        printf("2 (%lf, %lf) -- (%lf, %lf)  ", q[i1].x, q[i1].y, k[i2].x, k[i2].y);
-                        printf("(%lf, %lf) -- (%lf, %lf)  ", q[j1].x, q[j1].y, k[j2].x, k[j2].y);
-                        printf("(%lf, %lf) -- (%lf, %lf)\n", q[k1].x, q[k1].y, k[k2].x, k[k2].y);
                         ADD_ADJMAT_EDGE(i1, i2, j1, j2);
                         ADD_ADJMAT_EDGE(j1, j2, k1, k2);
                         ADD_ADJMAT_EDGE(i1, i2, k1, k2);
                     }
                     if (check[3]) {
                         kt[iy].coeff_return3(i2, j2, k2);
-                        printf("3 (%lf, %lf) -- (%lf, %lf)  ", q[i1].x, q[i1].y, k[i2].x, k[i2].y);
-                        printf("(%lf, %lf) -- (%lf, %lf)  ", q[j1].x, q[j1].y, k[j2].x, k[j2].y);
-                        printf("(%lf, %lf) -- (%lf, %lf)\n", q[k1].x, q[k1].y, k[k2].x, k[k2].y);
                         ADD_ADJMAT_EDGE(i1, i2, j1, j2);
                         ADD_ADJMAT_EDGE(j1, j2, k1, k2);
                         ADD_ADJMAT_EDGE(i1, i2, k1, k2);
                     }
                     if (check[4]) {
                         kt[iy].coeff_return4(i2, j2, k2);
-                        printf("4 (%lf, %lf) -- (%lf, %lf)  ", q[i1].x, q[i1].y, k[i2].x, k[i2].y);
-                        printf("(%lf, %lf) -- (%lf, %lf)  ", q[j1].x, q[j1].y, k[j2].x, k[j2].y);
-                        printf("(%lf, %lf) -- (%lf, %lf)\n", q[k1].x, q[k1].y, k[k2].x, k[k2].y);
                         ADD_ADJMAT_EDGE(i1, i2, j1, j2);
                         ADD_ADJMAT_EDGE(j1, j2, k1, k2);
                         ADD_ADJMAT_EDGE(i1, i2, k1, k2);
                     }
                     if (check[5]) {
                         kt[iy].coeff_return5(i2, j2, k2);
-                        printf("5 (%lf, %lf) -- (%lf, %lf)  ", q[i1].x, q[i1].y, k[i2].x, k[i2].y);
-                        printf("(%lf, %lf) -- (%lf, %lf)  ", q[j1].x, q[j1].y, k[j2].x, k[j2].y);
-                        printf("(%lf, %lf) -- (%lf, %lf)\n", q[k1].x, q[k1].y, k[k2].x, k[k2].y);
                         ADD_ADJMAT_EDGE(i1, i2, j1, j2);
                         ADD_ADJMAT_EDGE(j1, j2, k1, k2);
                         ADD_ADJMAT_EDGE(i1, i2, k1, k2);
