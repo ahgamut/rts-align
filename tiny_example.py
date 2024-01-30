@@ -3,6 +3,7 @@ import cliquematch
 import sys, os
 import time
 import random
+from scipy.spatial.distance import pdist, squareform
 
 from triples.tr_gimme import gimme_graph3
 
@@ -17,15 +18,17 @@ MINDIST = 1e-1
 
 def find_clique(q_pts, k_pts, delta=0.01, epsilon=0.01):
     res = gimme_graph3(q_pts, k_pts, delta, epsilon) != 0
-    np.fill_diagonal(res, True)
-    print(res)
     G = cliquematch.Graph.from_matrix(res)
     c = np.array(G.get_max_clique(), dtype=np.int32) - 1
-    qc = c // len(k_pts)
-    kc = c % len(k_pts)
+    qc = q_pts[c // len(k_pts), :]
+    kc = k_pts[c % len(k_pts), :]
     print("clique is", c)
+    qdist = pdist(qc)
+    kdist = pdist(kc)
+    qs_by_ks = np.mean(qdist/kdist)
+    print("scale of Q/K is", qs_by_ks)
     for i in range(len(c)):
-        print(q_pts[qc[i]], "--", k_pts[kc[i]])
+        print(q_pts[i], "--", k_pts[i])
 
 
 def attempt():
@@ -38,11 +41,11 @@ def attempt():
     theta = np.pi * np.round(np.random.uniform(-1, 1), 2)
     print(translation, theta)
 
-    error = 0.3 * np.random.uniform(-1, 1, (len(q_pts), 2))
+    error = 0.03 * np.random.uniform(-1, 1, (len(q_pts), 2))
     q_pts = q_pts + translation
     rotmat = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
     # q_pts = np.matmul(q_pts, rotmat)
-    # q_pts = q_pts + error
+    q_pts = q_pts + error
     find_clique(q_pts, k_pts)
 
 
