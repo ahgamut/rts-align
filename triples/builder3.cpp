@@ -202,7 +202,7 @@ struct Triple {
 
     void compare(const Triple &other, u8 check[8], double delta) const {
         for (int i = 0; i < 8; ++i) check[i] = 0;
-        /* if any of these are nonzer it means this and other are
+        /* if any of these are nonzero it means this and other are
          * similar triangles, and hence the ratio of the sides will
          * be roughly equal (barring floating point shenanigans) */
         check[0] =
@@ -292,7 +292,6 @@ ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
     if (qlen < 3 || klen < 3) {
         throw std::runtime_error("too few points, cannot calculate\n");
     }
-    std::cout << "delta = " << delta << std::endl;
 
     Point *q = new Point[qlen];
     Point *k = new Point[klen];
@@ -309,7 +308,6 @@ ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
     };
 
     /* DONE COPYING - NOW I don't want the GIL */
-    std::cout << "<<<(C++) letting go of the gil >>>" << std::endl;
     py::gil_scoped_release let_go;
 
     /* declare Triple arrays and sizes */
@@ -328,7 +326,6 @@ ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
 
 #pragma omp parallel num_threads(NUM_THREADS)
     {
-        u32 x, y, z;
         u32 ix, iy;
         u8 check[8] = {0};
         u32 i1, j1, k1;
@@ -340,20 +337,20 @@ ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
             invert_combi(qlen, ix, qt, q);
         }
 
+#pragma omp for reduction(+ : valid_M)
+        for (ix = 0; ix < M; ++ix) {
+            valid_M += qt[ix].valid;
+        }
+
         /* fill the second set of triples */
 #pragma omp for
         for (iy = 0; iy < N; ++iy) {
             invert_combi(klen, iy, kt, k);
         }
 
-#pragma omp for reduction(+ : valid_M)
-        for (x = 0; x < M; x++) {
-            valid_M += qt[x].valid;
-        }
-
 #pragma omp for reduction(+ : valid_N)
-        for (x = 0; x < N; x++) {
-            valid_N += kt[x].valid;
+        for (iy = 0; iy < N; ++iy) {
+            valid_N += kt[iy].valid;
         }
 
 #define ADD_ADJMAT_EDGE(a1, a2, b1, b2)                             \
@@ -415,7 +412,6 @@ ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
 
     /* now I can probably acquire the GIL again */
     py::gil_scoped_acquire omg;
-    std::cout << "<<<(C++) got the gil again >>>" << std::endl;
 
     auto result = ndarray<u8>({matsize, matsize});
     auto res = result.mutable_unchecked<2>();

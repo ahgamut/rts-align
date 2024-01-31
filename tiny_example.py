@@ -38,7 +38,6 @@ def kabsch(Q_pts, K_pts, zoom):
     theta = np.arctan2(rotmat[0, 1], rotmat[0, 0])
     theta = 0 if np.isnan(theta) or np.isinf(theta) else theta
 
-    print("zoom = ", zoom)
     print("theta is", theta, np.tan(theta))
     print("dx, dy are", dx, dy)
     return {
