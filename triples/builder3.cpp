@@ -326,6 +326,7 @@ ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
         adjmat[zz] = 0;
     }
 
+#pragma omp parallel num_threads(NUM_THREADS)
     {
         u32 x, y, z;
         u32 ix, iy;
@@ -334,19 +335,23 @@ ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
         u32 i2, j2, k2;
 
         /* fill the first set of triples */
+#pragma omp for
         for (ix = 0; ix < M; ++ix) {
             invert_combi(qlen, ix, qt, q);
         }
 
         /* fill the second set of triples */
+#pragma omp for
         for (iy = 0; iy < N; ++iy) {
             invert_combi(klen, iy, kt, k);
         }
 
+#pragma omp for reduction(+ : valid_M)
         for (x = 0; x < M; x++) {
             valid_M += qt[x].valid;
         }
 
+#pragma omp for reduction(+ : valid_N)
         for (x = 0; x < N; x++) {
             valid_N += kt[x].valid;
         }
@@ -356,6 +361,7 @@ ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
     adjmat[((a1)*klen + (a2)) + matsize * ((b1)*klen + (b2))] |= 1;
 
         /* construct the correspondence graph */
+#pragma omp for collapse(2)
         for (ix = 0; ix < M; ix++) {
             for (iy = 0; iy < N; iy++) {
                 if (qt[ix].valid && kt[iy].valid) {
