@@ -249,8 +249,8 @@ struct Triple {
     };
 };
 
-ndarray<u8> graph_edges2(ndarray<double> q_pts, ndarray<double> k_pts,
-                         double delta, double epsilon) {
+ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
+                         double delta) {
     /* declare Point arrays and sizes */
     auto q0 = q_pts.unchecked<2>();
     auto k0 = k_pts.unchecked<2>();
@@ -267,7 +267,6 @@ ndarray<u8> graph_edges2(ndarray<double> q_pts, ndarray<double> k_pts,
         throw std::runtime_error("too few points, cannot calculate\n");
     }
     std::cout << "delta = " << delta << std::endl;
-    std::cout << "epsilon = " << epsilon << std::endl;
 
     Point *q = new Point[qlen];
     Point *k = new Point[klen];
@@ -419,8 +418,8 @@ ndarray<u8> graph_edges2(ndarray<double> q_pts, ndarray<double> k_pts,
     return result;
 };
 
-PYBIND11_MODULE(tr_gimme, m) {
-    m.def("gimme_graph3", &graph_edges2,
+PYBIND11_MODULE(builder3, m) {
+    m.def("construct_graph", &construct_graph,
           "Construct the graph from triangles of Q and K points");
 }
 
