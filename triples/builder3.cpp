@@ -249,8 +249,34 @@ struct Triple {
     };
 };
 
+void invert_combi(int n, int i, Triple *t, Point *p) {
+    int x = 0;
+    int y = 0;
+    int z = 0;
+    int ii = i;
+    /* (x, y, z) is the ith element in the lexicographic ordering
+     * of the elements in choose(n, 3). solve for x, y, z.
+     * NOTE: 0 <= i, x, y, z < n */
+
+    /* choose(n, 2) elements will start with 0,
+     * choose(n-x, 2) elements with start with x */
+    for (x = 0; i >= ((n - x - 1) * (n - x - 2)) / 2; ++x) {
+        i -= ((n - x - 1) * (n - x - 2)) / 2;
+    }
+
+    /* choose ((n-x)-2, 1) elements will start with x, x+1
+     * choose ((n-x)-2-y,1) elements will start with x, x+y+1 */
+    for (y = 0; i >= ((n - x) - 2 - y); ++y) {
+        i -= ((n - x) - 2 - y);
+    }
+
+    y = (x + 1) + y;
+    z = (y + 1) + i;
+    t[ii].construct(x, y, z, p[x], p[y], p[z]);
+}
+
 ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
-                         double delta) {
+                            double delta) {
     /* declare Point arrays and sizes */
     auto q0 = q_pts.unchecked<2>();
     auto k0 = k_pts.unchecked<2>();
@@ -308,25 +334,13 @@ ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
         u32 i2, j2, k2;
 
         /* fill the first set of triples */
-        ix = 0;
-        for (x = 0; x < qlen; x++) {
-            for (y = x + 1; y < qlen; y++) {
-                for (z = y + 1; z < qlen; z++) {
-                    qt[ix].construct(x, y, z, q[x], q[y], q[z]);
-                    ++ix;
-                }
-            }
+        for (ix = 0; ix < M; ++ix) {
+            invert_combi(qlen, ix, qt, q);
         }
 
         /* fill the second set of triples */
-        iy = 0;
-        for (x = 0; x < klen; x++) {
-            for (y = x + 1; y < klen; y++) {
-                for (z = y + 1; z < klen; z++) {
-                    kt[iy].construct(x, y, z, k[x], k[y], k[z]);
-                    ++iy;
-                }
-            }
+        for (iy = 0; iy < N; ++iy) {
+            invert_combi(klen, iy, kt, k);
         }
 
         for (x = 0; x < M; x++) {
@@ -337,7 +351,7 @@ ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
             valid_N += kt[x].valid;
         }
 
-#define ADD_ADJMAT_EDGE(a1, a2, b1, b2) \
+#define ADD_ADJMAT_EDGE(a1, a2, b1, b2)                             \
     adjmat[((a1)*klen + (a2)) * matsize + ((b1)*klen + (b2))] |= 1; \
     adjmat[((a1)*klen + (a2)) + matsize * ((b1)*klen + (b2))] |= 1;
 
