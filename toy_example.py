@@ -38,9 +38,6 @@ def kabsch(Q_pts, K_pts, zoom):
     theta = np.arctan2(rotmat[0, 1], rotmat[0, 0])
     theta = 0 if np.isnan(theta) or np.isinf(theta) else theta
 
-    print("zoom = ", zoom)
-    print("theta is", theta, np.tan(theta))
-    print("dx, dy are", dx, dy)
     return {
         "zoom": zoom,
         "d": np.array([dx, dy]),
@@ -50,42 +47,61 @@ def kabsch(Q_pts, K_pts, zoom):
 
 def find_clique(q_pts, k_pts, delta=0.01):
     res = construct_graph(q_pts, k_pts, delta) != 0
+    print(res.shape, np.sum(res) / (res.shape[0] * (res.shape[0] - 1)))
     G = cliquematch.Graph.from_matrix(res)
-    c = np.array(G.get_max_clique(), dtype=np.int32) - 1
+    maxsize = min(len(q_pts), len(k_pts))
+    c = (
+        np.array(
+            G.get_max_clique(use_dfs=False, lower_bound=10, upper_bound=maxsize),
+            dtype=np.int32,
+        )
+        - 1
+    )
     qc = q_pts[c // len(k_pts), :]
     kc = k_pts[c % len(k_pts), :]
-    print("clique is", c)
+    print("clique size", len(c))
     qdist = pdist(qc)
     kdist = pdist(kc)
-    qs_by_ks = np.round(np.mean(qdist / kdist), 3)
-    print("scale of Q/K is", qs_by_ks)
+    qs_by_ks = np.mean(qdist / kdist)
+    print("zoom estimate", qs_by_ks)
+
     tform = kabsch(qc, kc, qs_by_ks)
     k_kabsch = rigid_form(kc * qs_by_ks, tform["theta"], tform["d"])
     pform = PolynomialTransform()
-    pform.estimate(kc, qc)
+    pform.estimate(kc, qc, order=4)
     k_poly2 = pform(kc)
-    for i in range(len(c)):
-        print(qc[i], "--", kc[i], k_kabsch[i], k_poly2[i], sep="\t")
+
+    rmsd = lambda x: np.mean(np.sqrt(np.sum((qc - x) ** 2, axis=1)))
+
+    print("kabsch distance", rmsd(k_kabsch))
+    print("poly2 distance", rmsd(k_poly2))
 
 
-def attempt():
-    q_pts = np.array([[6, 0], [-10, 0], [0, 8]])
-    t = [[3, 0], [-5, 0], [0, 4]]
-    random.shuffle(t)
-    k_pts = np.array(t)
+def attempt(k_size=30, q_size=30, c_size=10):
+    k_pts = 100 * np.float64(np.random.uniform(-1, 1, (k_size, 2)))
+    q_pts = np.zeros((q_size, 2), dtype=np.float64)
+    before = k_pts[np.random.choice(np.arange(0, k_size), c_size), :]
+    q_pts[:c_size] = before
+    q_pts[c_size:] = 100 * np.random.uniform(-1, 1, (q_size - c_size, 2))
 
-    translation = np.array([np.random.randint(20, 50), np.random.randint(20, 50)])
+    ratio = np.round(np.random.uniform(1, 2.5), 2)
+    translation = np.array([np.random.randint(-50, 50), np.random.randint(-50, 50)])
     theta = np.pi * np.round(np.random.uniform(-1, 1), 2)
-    error = 1.0 * np.random.uniform(-1, 1, (len(q_pts), 2))
-    print(translation, theta, np.tan(theta))
-    print(np.median(np.abs(error / translation)))
+
+    error = 2.5 * np.random.uniform(-1, 1, (q_size, 2))
+    print("error percentage", np.median(np.abs(error / q_pts)))
+    q_pts = q_pts * ratio
     q_pts = rigid_form(q_pts, theta, translation) + error
-    find_clique(q_pts, k_pts, delta=0.2)
+
+    find_clique(q_pts, k_pts, delta=0.01)
+    print("<CHECK> ratio should be", ratio)
+    print("<CHECK> theta should be", theta)
+    print("<CHECK> translation should be", translation)
 
 
 def main():
     # np.random.seed(42)
-    attempt()
+    attempt(q_size=50, k_size=50, c_size=25)
 
 
 if __name__ == "__main__":

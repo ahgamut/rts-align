@@ -29,7 +29,7 @@ using u8 = uint8_t;
 
 static constexpr double MAX_RATIO = 5;
 static constexpr double MIN_DIST = 1;
-static constexpr double MIN_ANGLE = 5e-2;
+static constexpr double MIN_ANGLE = 1e-2;
 static constexpr double PI = 3.14159265358979;
 static constexpr u32 NUM_POINTS = 384; /* technically 1024 */
 
