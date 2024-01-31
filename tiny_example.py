@@ -4,12 +4,9 @@ import sys, os
 import time
 import random
 from scipy.spatial.distance import pdist, squareform
+from skimage.transform import PolynomialTransform
 
 from triples.builder3 import construct_graph
-
-
-TOLERANCE = 1
-MINDIST = 1e-1
 
 
 def rigid_form(pts, theta, d):
@@ -63,9 +60,12 @@ def find_clique(q_pts, k_pts, delta=0.01):
     qs_by_ks = np.round(np.mean(qdist / kdist), 3)
     print("scale of Q/K is", qs_by_ks)
     tform = kabsch(qc, kc, qs_by_ks)
-    kfmd = rigid_form(kc * qs_by_ks, tform["theta"], tform["d"])
+    k_kabsch = rigid_form(kc * qs_by_ks, tform["theta"], tform["d"])
+    pform = PolynomialTransform()
+    pform.estimate(kc, qc)
+    k_poly2 = pform(kc)
     for i in range(len(c)):
-        print(qc[i], "--", kc[i], kfmd[i], sep="\t")
+        print(qc[i], "--", kc[i], k_kabsch[i], k_poly2[i], sep="\t")
 
 
 def attempt():
