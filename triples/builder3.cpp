@@ -354,8 +354,7 @@ ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
         }
 
 #define ADD_ADJMAT_EDGE(a1, a2, b1, b2)                             \
-    adjmat[((a1)*klen + (a2)) * matsize + ((b1)*klen + (b2))] |= 1; \
-    adjmat[((a1)*klen + (a2)) + matsize * ((b1)*klen + (b2))] |= 1;
+    adjmat[((a1)*klen + (a2)) * matsize + ((b1)*klen + (b2))] = 1;
 
         /* construct the correspondence graph */
 #pragma omp for collapse(2)

@@ -47,7 +47,7 @@ def kabsch(Q_pts, K_pts, zoom):
 
 def find_clique(q_pts, k_pts, delta=0.01):
     res = construct_graph(q_pts, k_pts, delta) != 0
-    print(res.shape, np.sum(res) / (res.shape[0] * (res.shape[0] - 1)))
+    print(res.shape, 2 * np.sum(res) / (res.shape[0] * (res.shape[0] - 1)))
     G = cliquematch.Graph.from_matrix(res)
     maxsize = min(len(q_pts), len(k_pts))
     c = (
@@ -101,7 +101,7 @@ def attempt(k_size=30, q_size=30, c_size=10):
 
 def main():
     # np.random.seed(42)
-    attempt(q_size=50, k_size=50, c_size=35)
+    attempt(q_size=40, k_size=40, c_size=35)
 
 
 if __name__ == "__main__":
