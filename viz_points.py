@@ -23,11 +23,11 @@ def show_points(Q, K, Q_corr, K_corr, order=2, num_steps=15, filename=None):
     s = FRAMES_PER_MOD
     anim_steps = (num_steps) * s + 1  # total length after interpolation
 
-    pform = sktrans.PolynomialTransform()
-    pform.estimate(K_corr, Q_corr, order=order)
+    pform = sktrans.SimilarityTransform()
+    pform.estimate(K_corr, Q_corr)
 
-    tmp_form = sktrans.PolynomialTransform()
-    tmp_form.estimate(K_corr, K_corr, order=order)
+    tmp_form = sktrans.SimilarityTransform()
+    tmp_form.estimate(K_corr, K_corr)
 
     forward = np.linspace(tmp_form.params, pform.params, anim_steps)
     pause1 = forward[[-1] * (STOP_OFFSET)]
@@ -41,6 +41,8 @@ def show_points(Q, K, Q_corr, K_corr, order=2, num_steps=15, filename=None):
         nrows=1,
         ncols=2,
         figsize=(6, 4.5),
+        sharex=True,
+        sharey=True,
     )
     plt.tight_layout(rect=[0, 0, 1, 0.9])
     axs = axs.ravel()
@@ -72,11 +74,7 @@ def show_points(Q, K, Q_corr, K_corr, order=2, num_steps=15, filename=None):
         axs[1].add_artist(con)
         pats.append(con)
 
-    axs[0].set_xlim([-400, 400])
-    axs[0].set_ylim([-400, 400])
     axs[0].set_aspect("equal")
-    axs[1].set_xlim([-400, 400])
-    axs[1].set_ylim([-400, 400])
     axs[1].set_aspect("equal")
 
     def update_frame(n):

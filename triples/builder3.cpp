@@ -27,13 +27,16 @@ using u64 = uint64_t;
 using u16 = uint16_t;
 using u8 = uint8_t;
 
-static constexpr double MAX_RATIO = 5;
+static constexpr double MAX_RATIO = 2.5;
 static constexpr double MIN_DIST = 1;
-static constexpr double MIN_ANGLE = 1e-2;
+static constexpr double MIN_ANGLE = 5e-2;
 static constexpr double PI = 3.14159265358979;
 static constexpr u32 NUM_POINTS = 384; /* technically 1024 */
 
 /* NOTE: LOOK AT THE PARAM ORDERING IN THE MACROS! */
+
+#define TAXICAB_ANGLE(a1, a2, b1, b2, c1, c2) \
+    (std::fabs((a1) - (a2)) + std::fabs((b1) - (b2)) + std::fabs((c1) - (c2)))
 
 #define EUCDIST_ANGLE(a1, a2, b1, b2, c1, c2) \
     (std::hypot((a1) - (a2), std::hypot((b1) - (b2), (c1) - (c2))))
@@ -100,7 +103,7 @@ struct Triple {
         this->bt = stable_angle(b.x - a.x, b.y - a.y, c.x - b.x, c.y - b.y);
         this->cs = std::hypot(b.x - a.x, b.y - a.y);
         this->ct = stable_angle(c.x - b.x, c.y - b.y, a.x - c.x, a.y - c.y);
-        this->valid = this->get_valid();
+        this->valid = 1;
         this->inited = 1;
     }
 
@@ -205,18 +208,24 @@ struct Triple {
         /* if any of these are nonzero it means this and other are
          * similar triangles, and hence the ratio of the sides will
          * be roughly equal (barring floating point shenanigans) */
-        check[0] =
-            angle_compare0(other) <= delta && side_ratio0(other) <= MAX_RATIO;
-        check[1] =
-            angle_compare1(other) <= delta && side_ratio1(other) <= MAX_RATIO;
-        check[2] =
-            angle_compare2(other) <= delta && side_ratio2(other) <= MAX_RATIO;
-        check[3] =
-            angle_compare3(other) <= delta && side_ratio3(other) <= MAX_RATIO;
-        check[4] =
-            angle_compare4(other) <= delta && side_ratio4(other) <= MAX_RATIO;
-        check[5] =
-            angle_compare5(other) <= delta && side_ratio5(other) <= MAX_RATIO;
+        check[0] = angle_compare0(other) <= delta &&
+                   side_ratio0(other) <= MAX_RATIO &&
+                   side_ratio0(other) >= (1 / MAX_RATIO);
+        check[1] = angle_compare1(other) <= delta &&
+                   side_ratio1(other) <= MAX_RATIO &&
+                   side_ratio1(other) >= (1 / MAX_RATIO);
+        check[2] = angle_compare2(other) <= delta &&
+                   side_ratio2(other) <= MAX_RATIO &&
+                   side_ratio2(other) >= (1 / MAX_RATIO);
+        check[3] = angle_compare3(other) <= delta &&
+                   side_ratio3(other) <= MAX_RATIO &&
+                   side_ratio3(other) >= (1 / MAX_RATIO);
+        check[4] = angle_compare4(other) <= delta &&
+                   side_ratio4(other) <= MAX_RATIO &&
+                   side_ratio4(other) >= (1 / MAX_RATIO);
+        check[5] = angle_compare5(other) <= delta &&
+                   side_ratio5(other) <= MAX_RATIO &&
+                   side_ratio5(other) >= (1 / MAX_RATIO);
     };
 
     void weighted_compare(const Triple &other, double check[8],
@@ -353,8 +362,10 @@ ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
             valid_N += kt[iy].valid;
         }
 
-#define ADD_ADJMAT_EDGE(a1, a2, b1, b2)                             \
-    adjmat[((a1)*klen + (a2)) * matsize + ((b1)*klen + (b2))] = 1;
+#define ADD_ADJMAT_EDGE(a1, a2, b1, b2)                                \
+    __atomic_store_n(                                                  \
+        adjmat + ((a1)*klen + (a2)) * matsize + ((b1)*klen + (b2)), 1, \
+        __ATOMIC_SEQ_CST);
 
         /* construct the correspondence graph */
 #pragma omp for collapse(2)
