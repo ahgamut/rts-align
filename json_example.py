@@ -67,6 +67,33 @@ def color_greed(adjmat):
     return color
 
 
+def wcc(adjmat):
+    visited = np.zeros(len(adjmat), dtype=np.bool_)
+    components = []
+
+    def recwcc(ind):
+        if visited[ind]:
+            return
+        visited[ind] = True
+        components[-1].add(ind)
+        print(len(components), len(components[-1]))
+        for x in adjmat[ind].nonzero()[0]:
+            if not visited[x]:
+                recwcc(x)
+                visited[x] = True
+
+    for i in range(len(adjmat)):
+        if not visited[i]:
+            components.append(set([i]))
+            recwcc(i)
+            visited[i] = True
+
+    for i, x in enumerate(components):
+        print(i, len(x), x)
+
+    return None + 1
+
+
 def find_clique(q_pts, k_pts, delta=0.01, lower_bound=10):
     res = construct_graph(q_pts, k_pts, delta)
     res = res | res.T
@@ -117,14 +144,15 @@ def find_clique(q_pts, k_pts, delta=0.01, lower_bound=10):
         c0 = np.array(cs) - 1
         qc0 = q_pts[c0 // len(k_pts), :]
         kc0 = k_pts[c0 % len(k_pts), :]
+        zr = pdist(qc0) / pdist(kc0)
         pform.estimate(kc0, qc0)
         a = rmsd(pform(kc0), qc0)
+        print(c0, a, beat, "zoom", np.mean(zr), np.std(zr))
         if a < beat:
             beat = a
             qc = qc0
             kc = kc0
-
-    viz_points.show_points(q_pts, k_pts, qc, kc, order=2, num_steps=5)
+            viz_points.show_points(q_pts, k_pts, qc, kc, order=2, num_steps=5)
 
 
 def attempt(k_pts, q_pts, c_size):
@@ -139,7 +167,7 @@ def ok():
     q_pts = np.array(b["valid"]) / 12 - 200
 
     print(len(k_pts), len(q_pts))
-    attempt(k_pts/2, q_pts, c_size=4)
+    attempt(k_pts / 2, q_pts, c_size=4)
 
 
 def main():
