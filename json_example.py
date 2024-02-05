@@ -62,8 +62,8 @@ def color_greed(adjmat):
         else:
             color[i] = np.max(tmp) + 1
         visited[i] = True
-    print(np.max(color))
-    print(np.column_stack([color, degrees]))
+    print("coloring number is ", np.max(color))
+    # print(np.column_stack([color, degrees]))
     return color
 
 
@@ -94,15 +94,20 @@ def wcc(adjmat):
     return None + 1
 
 
-def find_clique(q_pts, k_pts, delta=0.01, lower_bound=10):
-    res = construct_graph(q_pts, k_pts, delta)
+def clean_graph(adjmat, qlen, klen, lower_bound):
+    for i in range(len(adjmat)):
+        if np.sum(adjmat[i]) < lower_bound:
+            adjmat[i, :] = False
+            adjmat[:, i] = False
+    return adjmat
+
+
+def find_clique(q_pts, k_pts, delta=0.01, epsilon=1, lower_bound=10):
+    res = construct_graph(q_pts, k_pts, delta, epsilon)
     res = res | res.T
     res = res != 0
     print(np.sum(res))
-    for i in range(len(res)):
-        if np.sum(res[i]) < lower_bound:
-            res[i, :] = False
-            res[:, i] = False
+    clean_graph(res, len(q_pts), len(k_pts), lower_bound)
     print(np.sum(res))
     color = color_greed(res)
     print(res.shape, 2 * np.sum(res) / (res.shape[0] * (res.shape[0] - 1)))
@@ -148,15 +153,15 @@ def find_clique(q_pts, k_pts, delta=0.01, lower_bound=10):
         pform.estimate(kc0, qc0)
         a = rmsd(pform(kc0), qc0)
         print(c0, a, beat, "zoom", np.mean(zr), np.std(zr))
+        viz_points.show_points(q_pts, k_pts, qc0, kc0, order=2, num_steps=5)
         if a < beat:
             beat = a
             qc = qc0
             kc = kc0
-            viz_points.show_points(q_pts, k_pts, qc, kc, order=2, num_steps=5)
 
 
 def attempt(k_pts, q_pts, c_size):
-    find_clique(q_pts, k_pts, delta=0.004, lower_bound=c_size)
+    find_clique(q_pts, k_pts, delta=0.005, epsilon=0.05, lower_bound=c_size)
 
 
 def ok():

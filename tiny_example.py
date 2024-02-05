@@ -47,8 +47,8 @@ def kabsch(Q_pts, K_pts, zoom):
     }
 
 
-def find_clique(q_pts, k_pts, delta=0.01):
-    res = construct_graph(q_pts, k_pts, delta) != 0
+def find_clique(q_pts, k_pts, delta=0.01, epsilon=1):
+    res = construct_graph(q_pts, k_pts, delta, epsilon) != 0
     G = cliquematch.Graph.from_matrix(res)
     c = np.array(G.get_max_clique(), dtype=np.int32) - 1
     qc = q_pts[c // len(k_pts), :]
@@ -79,7 +79,7 @@ def attempt():
     print(translation, theta, np.tan(theta))
     print(np.median(np.abs(error / translation)))
     q_pts = rigid_form(q_pts, theta, translation) + error
-    find_clique(q_pts, k_pts, delta=0.2)
+    find_clique(q_pts, k_pts, delta=0.2, epsilon=0.5)
 
 
 def main():

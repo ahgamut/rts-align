@@ -45,14 +45,14 @@ def kabsch(Q_pts, K_pts, zoom):
     }
 
 
-def find_clique(q_pts, k_pts, delta=0.01):
-    res = construct_graph(q_pts, k_pts, delta) != 0
+def find_clique(q_pts, k_pts, delta=0.01, epsilon=1):
+    res = construct_graph(q_pts, k_pts, delta, epsilon) != 0
     print(res.shape, 2 * np.sum(res) / (res.shape[0] * (res.shape[0] - 1)))
     G = cliquematch.Graph.from_matrix(res)
     maxsize = min(len(q_pts), len(k_pts))
     c = (
         np.array(
-            G.get_max_clique(use_dfs=False, lower_bound=10, upper_bound=maxsize),
+            G.get_max_clique(use_dfs=True, lower_bound=10, upper_bound=maxsize),
             dtype=np.int32,
         )
         - 1
@@ -93,7 +93,7 @@ def attempt(k_size=30, q_size=30, c_size=10):
     q_pts = q_pts * ratio
     q_pts = rigid_form(q_pts, theta, translation) + error
 
-    find_clique(q_pts, k_pts, delta=0.01)
+    find_clique(q_pts, k_pts, delta=0.1, epsilon=0.03)
     print("<CHECK> ratio should be", ratio)
     print("<CHECK> theta should be", theta)
     print("<CHECK> translation should be", translation)

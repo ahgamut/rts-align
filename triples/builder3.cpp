@@ -28,24 +28,38 @@ using u16 = uint16_t;
 using u8 = uint8_t;
 
 static constexpr double MAX_RATIO = 2.5;
-static constexpr double MIN_DIST = 1;
-static constexpr double MIN_ANGLE = 5e-2;
+static constexpr double MIN_DIST = 1e-3;
+static constexpr double MIN_ANGLE = 5e-3;
 static constexpr double PI = 3.14159265358979;
 static constexpr u32 NUM_POINTS = 384; /* technically 1024 */
 
 /* NOTE: LOOK AT THE PARAM ORDERING IN THE MACROS! */
 
-#define TAXICAB_ANGLE(a1, a2, b1, b2, c1, c2) \
+#define TAXICAB_METRIC(a1, a2, b1, b2, c1, c2) \
     (std::fabs((a1) - (a2)) + std::fabs((b1) - (b2)) + std::fabs((c1) - (c2)))
 
-#define EUCDIST_ANGLE(a1, a2, b1, b2, c1, c2) \
+#define EUCDIST_METRIC(a1, a2, b1, b2, c1, c2) \
     (std::hypot((a1) - (a2), std::hypot((b1) - (b2), (c1) - (c2))))
 
 #define ANGLE_COMPARE(a1, a2, b1, b2, c1, c2) \
-    EUCDIST_ANGLE((a1), (a2), (b1), (b2), (c1), (c2));
+    EUCDIST_METRIC((a1), (a2), (b1), (b2), (c1), (c2));
+
+#define SRAT_COMPARE(a1, a2, b1, b2, c1, c2) \
+    TAXICAB_METRIC((a1), (a2), (b1), (b2), (c1), (c2));
 
 #define SIDE_RATIO(a1, a2, b1, b2, c1, c2) \
     (((a2) / (a1) + (b2) / (b1) + (c2) / (c1)) / 3);
+
+#define BINARY_CMP(n, other, delta, epsilon)   \
+    ((angle_compare ## n ((other)) <= (delta)) && \
+     (sr_compare ## n ((other)) <= (epsilon)) &&  \
+     (side_ratio ## n ((other)) <= MAX_RATIO) &&  \
+     (side_ratio ## n ((other)) >= (1 / MAX_RATIO)))
+
+#define WEIGHTED_CMP(n, other, delta, epsilon)    \
+    (BINARY_CMP(n, (other), (delta), (epsilon)) \
+         ? (side_ratio ## n ((other)) / (delta))       \
+         : 0.0)
 
 #define NUM_THREADS 12
 
@@ -103,15 +117,12 @@ struct Triple {
         this->bt = stable_angle(b.x - a.x, b.y - a.y, c.x - b.x, c.y - b.y);
         this->cs = std::hypot(b.x - a.x, b.y - a.y);
         this->ct = stable_angle(c.x - b.x, c.y - b.y, a.x - c.x, a.y - c.y);
-        this->valid = 1;
+        this->valid = this->get_valid();
         this->inited = 1;
     }
 
     bool get_valid() const {
-        return (at > MIN_ANGLE && bt > MIN_ANGLE && ct > MIN_ANGLE) &&
-               (at < PI - MIN_ANGLE && bt < PI - MIN_ANGLE &&
-                ct < PI - MIN_ANGLE) &&
-               (as > MIN_DIST && bs > MIN_DIST && cs > MIN_DIST);
+        return (as > MIN_DIST && bs > MIN_DIST && cs > MIN_DIST);
     };
 
     void coeff_return0(u32 &ii, u32 &jj, u32 &kk) const {
@@ -177,6 +188,50 @@ struct Triple {
         return x;
     }
 
+    /* compare side ratios for similarity */
+    double sr_compare0(const Triple &other) const {
+        double r1 = this->as / other.as;
+        double r2 = this->bs / other.bs;
+        double r3 = this->cs / other.cs;
+        double x = SRAT_COMPARE(r1, r2, r2, r3, r3, r1);
+        return x;
+    }
+    double sr_compare1(const Triple &other) const {
+        double r1 = this->as / other.as;
+        double r2 = this->bs / other.cs;
+        double r3 = this->cs / other.bs;
+        double x = SRAT_COMPARE(r1, r2, r2, r3, r3, r1);
+        return x;
+    }
+    double sr_compare2(const Triple &other) const {
+        double r1 = this->as / other.bs;
+        double r2 = this->bs / other.as;
+        double r3 = this->cs / other.cs;
+        double x = SRAT_COMPARE(r1, r2, r2, r3, r3, r1);
+        return x;
+    }
+    double sr_compare3(const Triple &other) const {
+        double r1 = this->as / other.bs;
+        double r2 = this->bs / other.cs;
+        double r3 = this->cs / other.as;
+        double x = SRAT_COMPARE(r1, r2, r2, r3, r3, r1);
+        return x;
+    }
+    double sr_compare4(const Triple &other) const {
+        double r1 = this->as / other.cs;
+        double r2 = this->bs / other.bs;
+        double r3 = this->cs / other.as;
+        double x = SRAT_COMPARE(r1, r2, r2, r3, r3, r1);
+        return x;
+    }
+    double sr_compare5(const Triple &other) const {
+        double r1 = this->as / other.cs;
+        double r2 = this->bs / other.as;
+        double r3 = this->cs / other.bs;
+        double x = SRAT_COMPARE(r1, r2, r2, r3, r3, r1);
+        return x;
+    }
+
     /* returns other / this */
     double side_ratio0(const Triple &other) const {
         return SIDE_RATIO(this->as, other.as, this->bs, other.bs, this->cs,
@@ -203,58 +258,29 @@ struct Triple {
                           other.bs);
     }
 
-    void compare(const Triple &other, u8 check[8], double delta) const {
+    void compare(const Triple &other, u8 check[8], double delta,
+                 double epsilon) const {
         for (int i = 0; i < 8; ++i) check[i] = 0;
         /* if any of these are nonzero it means this and other are
          * similar triangles, and hence the ratio of the sides will
          * be roughly equal (barring floating point shenanigans) */
-        check[0] = angle_compare0(other) <= delta &&
-                   side_ratio0(other) <= MAX_RATIO &&
-                   side_ratio0(other) >= (1 / MAX_RATIO);
-        check[1] = angle_compare1(other) <= delta &&
-                   side_ratio1(other) <= MAX_RATIO &&
-                   side_ratio1(other) >= (1 / MAX_RATIO);
-        check[2] = angle_compare2(other) <= delta &&
-                   side_ratio2(other) <= MAX_RATIO &&
-                   side_ratio2(other) >= (1 / MAX_RATIO);
-        check[3] = angle_compare3(other) <= delta &&
-                   side_ratio3(other) <= MAX_RATIO &&
-                   side_ratio3(other) >= (1 / MAX_RATIO);
-        check[4] = angle_compare4(other) <= delta &&
-                   side_ratio4(other) <= MAX_RATIO &&
-                   side_ratio4(other) >= (1 / MAX_RATIO);
-        check[5] = angle_compare5(other) <= delta &&
-                   side_ratio5(other) <= MAX_RATIO &&
-                   side_ratio5(other) >= (1 / MAX_RATIO);
+        check[0] = BINARY_CMP(0, other, delta, epsilon);
+        check[1] = BINARY_CMP(1, other, delta, epsilon);
+        check[2] = BINARY_CMP(2, other, delta, epsilon);
+        check[3] = BINARY_CMP(3, other, delta, epsilon);
+        check[4] = BINARY_CMP(4, other, delta, epsilon);
+        check[5] = BINARY_CMP(5, other, delta, epsilon);
     };
 
     void weighted_compare(const Triple &other, double check[8],
-                          double delta) const {
+                          double delta, double epsilon) const {
         for (int i = 0; i < 8; ++i) check[i] = 0;
-        check[0] =
-            (angle_compare0(other) <= delta && side_ratio0(other) <= MAX_RATIO)
-                ? angle_compare0(other) / delta
-                : 0.0;
-        check[1] =
-            (angle_compare1(other) <= delta && side_ratio1(other) <= MAX_RATIO)
-                ? angle_compare1(other) / delta
-                : 0.0;
-        check[2] =
-            (angle_compare2(other) <= delta && side_ratio2(other) <= MAX_RATIO)
-                ? angle_compare2(other) / delta
-                : 0.0;
-        check[3] =
-            (angle_compare3(other) <= delta && side_ratio3(other) <= MAX_RATIO)
-                ? angle_compare3(other) / delta
-                : 0.0;
-        check[4] =
-            (angle_compare4(other) <= delta && side_ratio4(other) <= MAX_RATIO)
-                ? angle_compare4(other) / delta
-                : 0.0;
-        check[5] =
-            (angle_compare5(other) <= delta && side_ratio5(other) <= MAX_RATIO)
-                ? angle_compare5(other) / delta
-                : 0.0;
+        check[0] = WEIGHTED_CMP(0, other, delta, epsilon);
+        check[1] = WEIGHTED_CMP(1, other, delta, epsilon);
+        check[2] = WEIGHTED_CMP(2, other, delta, epsilon);
+        check[3] = WEIGHTED_CMP(3, other, delta, epsilon);
+        check[4] = WEIGHTED_CMP(4, other, delta, epsilon);
+        check[5] = WEIGHTED_CMP(5, other, delta, epsilon);
     };
 };
 
@@ -285,7 +311,7 @@ void invert_combi(int n, int i, Triple *t, Point *p) {
 }
 
 ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
-                            double delta) {
+                            double delta, double epsilon) {
     /* declare Point arrays and sizes */
     auto q0 = q_pts.unchecked<2>();
     auto k0 = k_pts.unchecked<2>();
@@ -375,7 +401,7 @@ ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
                     /* the compare call needs to happen here */
                     /* and then you write into adjmat */
                     qt[ix].coeff_return0(i1, j1, k1);
-                    qt[ix].compare(kt[iy], check, delta);
+                    qt[ix].compare(kt[iy], check, delta, epsilon);
                     if (check[0]) {
                         kt[iy].coeff_return0(i2, j2, k2);
                         ADD_ADJMAT_EDGE(i1, i2, j1, j2);
