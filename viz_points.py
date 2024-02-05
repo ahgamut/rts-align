@@ -30,11 +30,13 @@ def show_points(Q, K, Q_corr, K_corr, order=2, num_steps=15, filename=None):
     tmp_form.estimate(K_corr, K_corr)
 
     forward = np.linspace(tmp_form.params, pform.params, anim_steps)
-    pause1 = forward[[-1] * (STOP_OFFSET)]
-    backward = forward[::-1]
-    pause2 = forward[[0] * (STOP_OFFSET)]
-    weights = np.row_stack([forward, pause1, backward, pause2])
-    l = len(weights)
+    l0 = len(forward)
+    frame_map = np.zeros(2 * l0 + 2 * STOP_OFFSET, dtype=np.int32)
+    frame_map[:l0] = np.arange(0, l0)
+    frame_map[l0 : l0 + STOP_OFFSET] = l0 - 1
+    frame_map[l0 + STOP_OFFSET : (2 * l0 + STOP_OFFSET)] = np.arange(0, l0)[::-1]
+    frame_map[(2 * l0 + STOP_OFFSET) :] = 0
+    l = len(frame_map)
 
     plt.rcParams.update({"font.size": 16})
     fig, axs = plt.subplots(
@@ -79,7 +81,8 @@ def show_points(Q, K, Q_corr, K_corr, order=2, num_steps=15, filename=None):
 
     def update_frame(n):
         if n >= START_OFFSET and n - START_OFFSET < l:
-            tmp_form.params = weights[n - START_OFFSET, :]
+            frame = n - START_OFFSET
+            tmp_form.params = forward[frame_map[frame]]
             new_K = tmp_form(K)
             new_Kc0 = tmp_form(K_corr)
             new_Kc = tmp_form(K_corr[inds])

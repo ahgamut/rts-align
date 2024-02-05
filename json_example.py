@@ -106,26 +106,19 @@ def find_clique(q_pts, k_pts, delta=0.01, epsilon=1, lower_bound=10):
     res = construct_graph(q_pts, k_pts, delta, epsilon)
     res = res | res.T
     res = res != 0
-    print(np.sum(res))
     clean_graph(res, len(q_pts), len(k_pts), lower_bound)
-    print(np.sum(res))
     color = color_greed(res)
     print(res.shape, 2 * np.sum(res) / (res.shape[0] * (res.shape[0] - 1)))
     G = cliquematch.Graph.from_matrix(res)
     maxsize = min(len(q_pts), len(k_pts))
-    c = (
-        np.array(
-            G.get_max_clique(
-                use_dfs=True, lower_bound=lower_bound, upper_bound=maxsize
-            ),
-            dtype=np.int32,
-        )
-        - 1
-    )
-    print("color", color[c])
+
+    c = G.get_max_clique(use_dfs=True, lower_bound=lower_bound, upper_bound=maxsize)
+    c = np.array(c, dtype=np.int32) - 1
+
     qc = q_pts[c // len(k_pts), :]
     kc = k_pts[c % len(k_pts), :]
-    print("clique size", len(c))
+    indices = np.column_stack([c // len(k_pts), c % len(k_pts)])
+    print("clique size", len(c), indices)
     qdist = pdist(qc)
     kdist = pdist(kc)
     qs_by_ks = np.mean(qdist / kdist)
@@ -152,16 +145,13 @@ def find_clique(q_pts, k_pts, delta=0.01, epsilon=1, lower_bound=10):
         zr = pdist(qc0) / pdist(kc0)
         pform.estimate(kc0, qc0)
         a = rmsd(pform(kc0), qc0)
-        print(c0, a, beat, "zoom", np.mean(zr), np.std(zr))
+        indices0 = np.column_stack([c0 // len(k_pts), c0 % len(k_pts)])
+        print(indices0, a, beat, "zoom", np.mean(zr), np.std(zr))
         viz_points.show_points(q_pts, k_pts, qc0, kc0, order=2, num_steps=5)
         if a < beat:
             beat = a
             qc = qc0
             kc = kc0
-
-
-def attempt(k_pts, q_pts, c_size):
-    find_clique(q_pts, k_pts, delta=0.005, epsilon=0.05, lower_bound=c_size)
 
 
 def ok():
@@ -172,18 +162,18 @@ def ok():
     q_pts = np.array(b["valid"]) / 12 - 200
 
     print(len(k_pts), len(q_pts))
-    attempt(k_pts / 2, q_pts, c_size=4)
+    find_clique(q_pts, k_pts / 2, delta=0.05, epsilon=0.5, lower_bound=4)
 
 
 def main():
     a = json.load(open("./QK001-KG.json"))
     b = json.load(open("./QK001-QC.json"))
     # print(a)
-    k_pts = np.array(a["valid"])[1:] / 18
-    q_pts = np.array(b["valid"])[1:] / 12
+    k_pts = np.array(a["valid"])[1:, ::-1] / 18
+    q_pts = np.array(b["valid"])[1:, ::-1] / 12
 
     print(len(k_pts), len(q_pts))
-    attempt(k_pts, q_pts, c_size=4)
+    find_clique(q_pts, k_pts, delta=0.007, epsilon=0.05, lower_bound=10)
 
 
 if __name__ == "__main__":
