@@ -4,6 +4,10 @@ __pycache__/
 *$py.class
 .rendered*
 *.gif
+*.mp4
+*.jpg
+*.JPG
+*json
 
 # C extensions
 *.so
