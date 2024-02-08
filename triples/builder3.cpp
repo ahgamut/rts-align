@@ -51,17 +51,18 @@ static constexpr u32 NUM_POINTS = 384; /* technically 1024 */
     (((a2) / (a1) + (b2) / (b1) + (c2) / (c1)) / 3);
 
 #define BINARY_CMP(n, other, delta, epsilon)   \
-    ((angle_compare ## n ((other)) <= (delta)) && \
-     (sr_compare ## n ((other)) <= (epsilon)) &&  \
-     (side_ratio ## n ((other)) <= MAX_RATIO) &&  \
-     (side_ratio ## n ((other)) >= (1 / MAX_RATIO)))
+    ((angle_compare##n((other)) <= (delta)) && \
+     (sr_compare##n((other)) <= (epsilon)) &&  \
+     (side_ratio##n((other)) <= MAX_RATIO) &&  \
+     (side_ratio##n((other)) >= (1 / MAX_RATIO)))
 
-#define WEIGHTED_CMP(n, other, delta, epsilon)    \
+#define WEIGHTED_CMP(n, other, delta, epsilon)  \
     (BINARY_CMP(n, (other), (delta), (epsilon)) \
-         ? (side_ratio ## n ((other)) / (delta))       \
+         ? (side_ratio##n((other)) / (delta))   \
          : 0.0)
 
 #define NUM_THREADS 12
+#define ADJMAT_THREAD_SAFE 0
 
 static inline double stable_angle(double u1, double u2, double v1, double v2) {
     // https://people.eecs.berkeley.edu/~wkahan/MathH110/Cross.pdf
@@ -272,8 +273,8 @@ struct Triple {
         check[5] = BINARY_CMP(5, other, delta, epsilon);
     };
 
-    void weighted_compare(const Triple &other, double check[8],
-                          double delta, double epsilon) const {
+    void weighted_compare(const Triple &other, double check[8], double delta,
+                          double epsilon) const {
         for (int i = 0; i < 8; ++i) check[i] = 0;
         check[0] = WEIGHTED_CMP(0, other, delta, epsilon);
         check[1] = WEIGHTED_CMP(1, other, delta, epsilon);
@@ -388,10 +389,15 @@ ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
             valid_N += kt[iy].valid;
         }
 
+#if ADJMAT_THREAD_SAFE
 #define ADD_ADJMAT_EDGE(a1, a2, b1, b2)                                \
     __atomic_store_n(                                                  \
         adjmat + ((a1)*klen + (a2)) * matsize + ((b1)*klen + (b2)), 1, \
         __ATOMIC_SEQ_CST);
+#else
+#define ADD_ADJMAT_EDGE(a1, a2, b1, b2) \
+    adjmat[((a1)*klen + (a2)) * matsize + ((b1)*klen + (b2))] = 1;
+#endif
 
         /* construct the correspondence graph */
 #pragma omp for collapse(2)
