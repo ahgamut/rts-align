@@ -8,6 +8,9 @@ __pycache__/
 *.jpg
 *.JPG
 *json
+*.tif
+*.TIF
+*.tiff
 
 # C extensions
 *.so

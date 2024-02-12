@@ -6,6 +6,7 @@ import time
 import random
 import json
 from scipy.spatial.distance import pdist, squareform
+from skimage.filters import threshold_local, threshold_triangle, threshold_otsu
 from skimage.transform import (
     PolynomialTransform,
     AffineTransform,
@@ -83,7 +84,7 @@ def clean_graph(adjmat, qlen, klen, lower_bound):
     return adjmat
 
 
-def find_clique(q_pts, k_pts, delta=0.01, epsilon=1, lower_bound=10):
+def find_clique(q_pts, k_pts, delta=0.01, epsilon=1, lower_bound=10, all_max=False):
     res = construct_graph(q_pts, k_pts, delta, epsilon)
     res = res | res.T
     res = res != 0
@@ -118,34 +119,40 @@ def find_clique(q_pts, k_pts, delta=0.01, epsilon=1, lower_bound=10):
     print("kabsch distance", rmsd(k_kabsch, qc))
     print("poly2 distance", rmsd(k_poly2, qc))
 
+    if all_max:
+        # go through all cliques, find most rigid transform
+        beat = rmsd(k_poly2, qc)
+        for cs in G.all_cliques(size=len(c)):
+            c0 = np.array(cs) - 1
+            qc0 = q_pts[c0 // len(k_pts), :]
+            kc0 = k_pts[c0 % len(k_pts), :]
+            zr = pdist(qc0) / pdist(kc0)
+            pform.estimate(kc0, qc0)
+            a = rmsd(pform(kc0), qc0)
+            indices0 = np.column_stack([c0 // len(k_pts), c0 % len(k_pts)])
+            print(len(indices0), a, beat, "zoom", np.mean(zr), np.std(zr))
+            if a < beat:
+                beat = a
+                qc = qc0
+                kc = kc0
+
     return qc, kc
 
-    # go through all cliques, find most rigid transform
-    beat = rmsd(k_poly2, qc)
-    for cs in G.all_cliques(size=len(c)):
-        c0 = np.array(cs) - 1
-        qc0 = q_pts[c0 // len(k_pts), :]
-        kc0 = k_pts[c0 % len(k_pts), :]
-        zr = pdist(qc0) / pdist(kc0)
-        pform.estimate(kc0, qc0)
-        a = rmsd(pform(kc0), qc0)
-        indices0 = np.column_stack([c0 // len(k_pts), c0 % len(k_pts)])
-        print(len(indices0), a, beat, "zoom", np.mean(zr), np.std(zr))
-        if a < beat:
-            beat = a
-            qc = qc0
-            kc = kc0
 
-    return qc, kc
-
-
-def loader(img_path, points_path, downscale):
+def loader(img_path, points_path, downscale, flip=False):
     img = skio.imread(img_path, as_gray=True)
     a = json.load(open(points_path))
     points = np.array(a["valid"])[1:, ::-1]
     if downscale != 1:
         img = rescale(img, 1 / downscale, anti_aliasing=True)
         points = points / downscale
+    if flip:
+        print("before", points)
+        print(img.shape)
+        # img = img[:, ::-1]
+        points[:, 0] = img.shape[1] - points[:, 0]
+        points[:, 1] = img.shape[0] - points[:, 1]
+        print(points)
 
     return img, points
 
@@ -164,17 +171,36 @@ def main():
         "-lb", "--lower-bound", default=10, type=int, help="lower bound for clique size"
     )
     parser.add_argument(
+        "--check-ties",
+        action="store_true",
+        dest="all_max",
+        help="look through all maxima",
+    )
+    parser.add_argument(
+        "--first-max",
+        action="store_false",
+        dest="all_max",
+        help="pick only the first maximum",
+    )
+    parser.add_argument(
         "-o", "--output", default=None, help="output file for saving animation"
     )
+    parser.set_defaults(all_max=False)
 
     d = parser.parse_args()
 
     q_img, q_pts = loader(d.q_img, d.q_points, d.q_down)
     k_img, k_pts = loader(d.k_img, d.k_points, d.k_down)
+    k_img = 1.0 * k_img > threshold_otsu(k_img)
 
     viz_image.show_setup(q_img, k_img, q_pts, k_pts)
     q_corr, k_corr = find_clique(
-        q_pts, k_pts, delta=d.delta, epsilon=d.epsilon, lower_bound=d.lower_bound
+        q_pts,
+        k_pts,
+        delta=d.delta,
+        epsilon=d.epsilon,
+        lower_bound=d.lower_bound,
+        all_max=d.all_max,
     )
     viz_image.show_anim(q_img, k_img, q_pts, k_pts, q_corr, k_corr, filename=d.output)
 
