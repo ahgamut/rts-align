@@ -27,6 +27,7 @@ using u64 = uint64_t;
 using u16 = uint16_t;
 using u8 = uint8_t;
 
+static constexpr double MIN_RATIO = 0.5;
 static constexpr double MAX_RATIO = 2.5;
 static constexpr double MIN_DIST = 1e-3;
 static constexpr double MIN_ANGLE = 5e-3;
@@ -54,7 +55,7 @@ static constexpr u32 NUM_POINTS = 384; /* technically 1024 */
     ((angle_compare##n((other)) <= (delta)) && \
      (sr_compare##n((other)) <= (epsilon)) &&  \
      (side_ratio##n((other)) <= MAX_RATIO) &&  \
-     (side_ratio##n((other)) >= (1 / MAX_RATIO)))
+     (side_ratio##n((other)) >= MIN_RATIO))
 
 #define WEIGHTED_CMP(n, other, delta, epsilon)  \
     (BINARY_CMP(n, (other), (delta), (epsilon)) \
