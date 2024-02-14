@@ -32,15 +32,32 @@ ex3 () {
     python3 image_example.py \
         -k ./050L_flipped.tif \
         -kp ./050L_flipped.json \
-        -kd 2 \
+        -kd 5 \
         -q ./050LBFT11-21-22AGGV12-05-22MM.tif \
         -qp ./050LBFT11.json \
-        -qd 2 \
-        --delta 0.003 \
-        --epsilon 0.5 \
+        -qd 5 \
+        -min 0.8 \
+        -max 1.5 \
+        --delta 0.008 \
+        --epsilon 0.1 \
         --lower-bound 10 \
-        --check-ties \
         --output "./SC050L-viz.mp4"
 }
 
-ex3
+ex4 () {
+    python3 image_example.py \
+        -k ./698RH1_flipped.tif \
+        -kp ./698RH1_flipped.json \
+        -kd 12 \
+        -q ./698RB3_E.tif \
+        -qp ./698RB3_E.json \
+        -qd 15 \
+        -min 0.75 \
+        -max 1.5 \
+        --delta 0.008 \
+        --epsilon 0.05 \
+        --lower-bound 10 \
+        --output "./WVU-698RB3-viz.mp4"
+}
+
+ex4

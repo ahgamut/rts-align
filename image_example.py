@@ -84,8 +84,17 @@ def clean_graph(adjmat, qlen, klen, lower_bound):
     return adjmat
 
 
-def find_clique(q_pts, k_pts, delta=0.01, epsilon=1, lower_bound=10, all_max=False):
-    res = construct_graph(q_pts, k_pts, delta, epsilon)
+def find_clique(
+    q_pts,
+    k_pts,
+    delta=0.01,
+    epsilon=1,
+    min_ratio=0.5,
+    max_ratio=2.5,
+    lower_bound=10,
+    all_max=False,
+):
+    res = construct_graph(q_pts, k_pts, delta, epsilon, min_ratio, max_ratio)
     res = res | res.T
     res = res != 0
     clean_graph(res, len(q_pts), len(k_pts), lower_bound)
@@ -168,6 +177,12 @@ def main():
     parser.add_argument("--delta", default=0.007, type=float, help="delta error")
     parser.add_argument("--epsilon", default=0.05, type=float, help="epsilon error")
     parser.add_argument(
+        "-min", "--min-ratio", default=0.5, type=float, help="minimum valid zoom ratio"
+    )
+    parser.add_argument(
+        "-max", "--max-ratio", default=2.5, type=float, help="maximum valid zoom ratio"
+    )
+    parser.add_argument(
         "-lb", "--lower-bound", default=10, type=int, help="lower bound for clique size"
     )
     parser.add_argument(
@@ -199,6 +214,8 @@ def main():
         k_pts,
         delta=d.delta,
         epsilon=d.epsilon,
+        min_ratio=d.min_ratio,
+        max_ratio=d.max_ratio,
         lower_bound=d.lower_bound,
         all_max=d.all_max,
     )

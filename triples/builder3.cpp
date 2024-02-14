@@ -27,13 +27,15 @@ using u64 = uint64_t;
 using u16 = uint16_t;
 using u8 = uint8_t;
 
-static constexpr double MIN_RATIO = 0.5;
-static constexpr double MAX_RATIO = 2.5;
+static constexpr double MIN_RATIO_DEFAULT = 0.5;
+static constexpr double MAX_RATIO_DEFAULT = 2.5;
 static constexpr double MIN_DIST = 1e-3;
 static constexpr double MIN_ANGLE = 5e-3;
 static constexpr double PI = 3.14159265358979;
 static constexpr u32 NUM_POINTS = 384; /* technically 1024 */
 
+static double MIN_RATIO = MIN_RATIO_DEFAULT;
+static double MAX_RATIO = MAX_RATIO_DEFAULT;
 /* NOTE: LOOK AT THE PARAM ORDERING IN THE MACROS! */
 
 #define TAXICAB_METRIC(a1, a2, b1, b2, c1, c2) \
@@ -313,7 +315,12 @@ void invert_combi(int n, int i, Triple *t, Point *p) {
 }
 
 ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
-                            double delta, double epsilon) {
+                            double delta, double epsilon, double min_ratio,
+                            double max_ratio) {
+    /* set ratios before anything */
+    MIN_RATIO = min_ratio;
+    MAX_RATIO = max_ratio;
+
     /* declare Point arrays and sizes */
     auto q0 = q_pts.unchecked<2>();
     auto k0 = k_pts.unchecked<2>();
@@ -321,7 +328,7 @@ ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
     const u32 qlen = q0.shape(0);
     const u32 klen = k0.shape(0);
 
-    if (qlen > 2 * NUM_POINTS || klen > 2 * NUM_POINTS ||
+    if (qlen > NUM_POINTS || klen > NUM_POINTS ||
         qlen * klen > NUM_POINTS * NUM_POINTS) {
         throw std::runtime_error(
             "too many points, might cause memory issues\n");
@@ -473,13 +480,21 @@ ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
     delete[] kt;
     delete[] adjmat;
 
+    /* reset ratios to default */
+    MIN_RATIO = MIN_RATIO_DEFAULT;
+    MAX_RATIO = MAX_RATIO_DEFAULT;
+
     /* send the answer back */
     return result;
 };
 
 PYBIND11_MODULE(builder3, m) {
     m.def("construct_graph", &construct_graph,
-          "Construct the graph from triangles of Q and K points");
+          "Construct the graph from triangles of Q and K points",
+          py::arg("q_pts"), py::arg("k_pts"),                 //
+          py::arg("delta") = 5e-3, py::arg("epsilon") = 0.1,  //
+          py::arg("min_ratio") = MIN_RATIO_DEFAULT,           //
+          py::arg("max_ratio") = MAX_RATIO_DEFAULT);
 }
 
 /*

@@ -28,9 +28,14 @@ def show_setup(Q_img, K_img, Q, K, filename=None):
         nrows=1,
         ncols=2,
         figsize=(6, 4.5),
+        sharex=True,
+        sharey=True,
     )
     plt.tight_layout(rect=[0, 0, 1, 0.9])
     axs = axs.ravel()
+    lim = max(max(Q_img.shape), max(K_img.shape))
+    axs[0].set_xlim((0, lim))
+    axs[0].set_ylim((lim, 0))
 
     q_pts, *_ = axs[0].plot(Q[:, 0], Q[:, 1], "ro", markersize=3, alpha=0.9)
     axs[0].imshow(Q_img, cmap="Greys_r")
@@ -64,6 +69,7 @@ def show_anim(Q_img, K_img, Q, K, Q_corr, K_corr, order=2, num_steps=15, filenam
     frame_map[l0 + STOP_OFFSET : (2 * l0 + STOP_OFFSET)] = np.arange(0, l0)[::-1]
     frame_map[(2 * l0 + STOP_OFFSET) :] = 0
     l = len(frame_map)
+    lim = max(max(Q_img.shape), max(K_img.shape))
 
     images = []
     for i in range(l0):
@@ -71,7 +77,7 @@ def show_anim(Q_img, K_img, Q, K, Q_corr, K_corr, order=2, num_steps=15, filenam
         warped_k = sktrans.warp(
             K_img,
             inverse_map=tmp_form.inverse,
-            output_shape=Q_img.shape,
+            output_shape=(lim, lim),
             mode="constant",
             cval=1,
         )
@@ -87,8 +93,7 @@ def show_anim(Q_img, K_img, Q, K, Q_corr, K_corr, order=2, num_steps=15, filenam
     )
     plt.tight_layout(rect=[0, 0, 1, 0.9])
     axs = axs.ravel()
-    lim = max(max(Q_img.shape), max(K_img.shape))
-    axs[0].set_xlim((lim, 0))
+    axs[0].set_xlim((0, lim))
     axs[0].set_ylim((lim, 0))
 
     q_back = axs[0].imshow(Q_img, cmap="Greys_r")
