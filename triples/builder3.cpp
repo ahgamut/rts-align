@@ -51,7 +51,7 @@ static double MAX_RATIO = MAX_RATIO_DEFAULT;
     TAXICAB_METRIC((a1), (a2), (b1), (b2), (c1), (c2));
 
 #define SIDE_RATIO(a1, a2, b1, b2, c1, c2) \
-    (((a2) / (a1) + (b2) / (b1) + (c2) / (c1)) / 3);
+    (((a1) / (a2) + (b1) / (b2) + (c1) / (c2)) / 3);
 
 #define BINARY_CMP(n, other, delta, epsilon)   \
     ((angle_compare##n((other)) <= (delta)) && \

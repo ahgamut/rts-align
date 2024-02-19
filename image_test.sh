@@ -53,7 +53,7 @@ ex4 () {
         -qp ./698RB3_E.json \
         -qd 15 \
         -min 0.75 \
-        -max 1.5 \
+        -max 1.0 \
         --delta 0.008 \
         --epsilon 0.05 \
         --lower-bound 10 \
