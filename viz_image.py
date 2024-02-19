@@ -10,6 +10,8 @@ from matplotlib.patches import Circle, ConnectionPatch
 from matplotlib.lines import Line2D
 from matplotlib.colors import LinearSegmentedColormap
 
+plt.rcParams.update({"font.size": 20})
+
 COLORDICT = {
     "red": [[0.0, 1.0, 1.0], [1.0, 1.0, 1.0]],
     "blue": [[0.0, 1.0, 1.0], [1.0, 1.0, 1.0]],
@@ -37,15 +39,16 @@ def show_setup(Q_img, K_img, Q, K, filename=None):
     axs[0].set_xlim((0, lim))
     axs[0].set_ylim((lim, 0))
 
+    # Q image and points
     q_pts, *_ = axs[0].plot(Q[:, 0], Q[:, 1], "ro", markersize=3, alpha=0.9)
     axs[0].imshow(Q_img, cmap="Greys_r")
     axs[0].set_title("Q")
 
+    # K image and points
     k_pts, *_ = axs[1].plot(K[:, 0], K[:, 1], "ro", markersize=3, alpha=0.9)
     axs[1].imshow(K_img, cmap="Greys_r")
     axs[1].set_title("K")
 
-    fig.suptitle("are we plotting correctly?")
     plt.show()
     if filename:
         fig.savefig(filename, dpi=200)
@@ -83,7 +86,6 @@ def show_anim(Q_img, K_img, Q, K, Q_corr, K_corr, order=2, num_steps=15, filenam
         )
         images.append(warped_k)
 
-    plt.rcParams.update({"font.size": 16})
     fig, axs = plt.subplots(
         nrows=1,
         ncols=3,
@@ -96,39 +98,43 @@ def show_anim(Q_img, K_img, Q, K, Q_corr, K_corr, order=2, num_steps=15, filenam
     axs[0].set_xlim((0, lim))
     axs[0].set_ylim((lim, 0))
 
+    inds = np.ravel(np.array(list(itertools.combinations(range(len(Q_corr)), 2))))
+
+    # Q image and points
+    axs[0].set_title("Q")
     q_back = axs[0].imshow(Q_img, cmap="Greys_r")
+    q_pts, *_ = axs[0].plot(Q[:, 0], Q[:, 1], "ro", markersize=3, alpha=0.7)
+    q_lines, *_ = axs[0].plot(
+        Q_corr[inds, 0], Q_corr[inds, 1], "b--", alpha=1, linewidth=0.5
+    )
+
+    # K image and points
+    axs[1].set_title("K")
     k_back = axs[1].imshow(images[0], cmap="Greys_r")
+    k_pts, *_ = axs[1].plot(K[:, 0], K[:, 1], "ro", markersize=3, alpha=0.7)
+    k_lines, *_ = axs[1].plot(
+        K_corr[inds, 0], K_corr[inds, 1], "b--", alpha=1, linewidth=0.5
+    )
+
+    # Overlay and points
+    axs[2].set_title("overlay")
     q_form = axs[2].imshow(Q_img, cmap="Greys_r")
     k_form = axs[2].imshow(images[0], cmap=COLORMAP)
-
-    q_pts, *_ = axs[0].plot(Q[:, 0], Q[:, 1], "ro", markersize=3, alpha=0.7)
-    k_pts, *_ = axs[1].plot(K[:, 0], K[:, 1], "ro", markersize=3, alpha=0.7)
     qf_pts, *_ = axs[2].plot(Q_corr[:, 0], Q_corr[:, 1], "ro", markersize=3, alpha=0.5)
     kf_pts, *_ = axs[2].plot(K_corr[:, 0], K_corr[:, 1], "ro", markersize=3, alpha=0.5)
 
-    # fig.suptitle("rotation, translation, and scale")
-    axs[0].set_title("Q")
-    axs[1].set_title("K")
-    axs[2].set_title("overlay")
     corr_mix = []
     for i in range(len(Q_corr)):
         corr_mix.append((Q_corr[i, 0], K_corr[i, 0]))
         corr_mix.append((Q_corr[i, 1], K_corr[i, 1]))
         corr_mix.append("b--")
-
-    inds = np.ravel(np.array(list(itertools.combinations(range(len(Q_corr)), 2))))
-    q_lines, *_ = axs[0].plot(
-        Q_corr[inds, 0], Q_corr[inds, 1], "b--", alpha=1, linewidth=0.5
-    )
-    k_lines, *_ = axs[1].plot(
-        K_corr[inds, 0], K_corr[inds, 1], "b--", alpha=1, linewidth=0.5
-    )
     map_lines = axs[2].plot(
         *corr_mix,
         linewidth=0.5,
         alpha=1,
     )
 
+    # the lines connecting Q and K
     pats = []
     for i in range(0, len(Q_corr)):
         con = ConnectionPatch(
@@ -146,24 +152,29 @@ def show_anim(Q_img, K_img, Q, K, Q_corr, K_corr, order=2, num_steps=15, filenam
     def update_frame(n):
         if n >= START_OFFSET and n - START_OFFSET < l:
             frame = n - START_OFFSET
-            tmp_form.params = forward[frame_map[frame]]
-            new_K_img = images[frame_map[frame]]
-            new_K = tmp_form(K)
-            new_Kc0 = tmp_form(K_corr)
-            new_Kc = tmp_form(K_corr[inds])
-
-            k_form.set_data(new_K_img)
-            k_form.set_alpha(1)
-            k_back.set_data(new_K_img)
-            k_pts.set_data(new_K[:, 0], new_K[:, 1])
-            kf_pts.set_data(new_Kc0[:, 0], new_Kc0[:, 1])
-            kf_pts.set_alpha(1)
-            k_lines.set_data(new_Kc[:, 0], new_Kc[:, 1])
-            k_lines.set_alpha(1)
-
+            fct = frame_map[frame]
+            # Q image and points
             q_lines.set_alpha(1)
             qf_pts.set_alpha(1)
 
+            # K image and points
+            tmp_form.params = forward[fct]
+            new_K = tmp_form(K)
+            new_K_img = images[fct]
+            k_back.set_data(new_K_img)
+            k_pts.set_data(new_K[:, 0], new_K[:, 1])
+            new_Kc = tmp_form(K_corr[inds])
+            k_lines.set_data(new_Kc[:, 0], new_Kc[:, 1])
+            k_lines.set_alpha(1)
+
+            # overlay and points
+            new_Kc0 = tmp_form(K_corr)
+            k_form.set_data(new_K_img)
+            k_form.set_alpha(1)
+            kf_pts.set_data(new_Kc0[:, 0], new_Kc0[:, 1])
+            kf_pts.set_alpha(1)
+
+            # lines across Q, K
             for i in range(0, len(Q_corr)):
                 pats[i].set_alpha(1)
                 pats[i].xy1 = new_Kc0[i]
@@ -172,7 +183,6 @@ def show_anim(Q_img, K_img, Q, K, Q_corr, K_corr, order=2, num_steps=15, filenam
                 map_lines[i].set_data(
                     [Q_corr[i, 0], new_Kc0[i, 0]], [Q_corr[i, 1], new_Kc0[i, 1]]
                 )
-            fct = frame_map[frame]
             if fct != 0:
                 fct += 1
             fct = (100 * fct) / len(forward)
