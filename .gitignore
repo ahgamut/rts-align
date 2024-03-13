@@ -11,6 +11,8 @@ __pycache__/
 *.tif
 *.TIF
 *.tiff
+anthony/
+examples/
 
 # C extensions
 *.so

@@ -13,12 +13,13 @@ from matplotlib.colors import LinearSegmentedColormap
 plt.rcParams.update({"font.size": 20})
 
 COLORDICT = {
-    "red": [[0.0, 1.0, 1.0], [1.0, 1.0, 1.0]],
-    "blue": [[0.0, 1.0, 1.0], [1.0, 1.0, 1.0]],
-    "green": [[0.0, 1.0, 1.0], [1.0, 1.0, 1.0]],
-    "alpha": [[0.0, 1.0, 1.0], [0.95, 0.0, 0.0], [1.0, 0.0, 0.0]],
+    "red": [[0.0, 0.612, 0.612], [1.0, 0.561, 0.561]],
+    "green": [[0.0, 0.149, 0.149], [1.0, 0.149, 0.149]],
+    "blue": [[0.0, 0.561, 0.561], [1.0, 0.561, 0.561]],
+    "alpha": [[0.0, 0.55, 0.55], [0.95, 0.55, 0.55], [1.0, 0.0, 0.0]],
 }
 COLORMAP = LinearSegmentedColormap("zzazz", segmentdata=COLORDICT, N=256)
+
 
 FRAMES_PER_MOD = 4
 START_OFFSET = 5 * FRAMES_PER_MOD
