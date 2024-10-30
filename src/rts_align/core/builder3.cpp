@@ -1,4 +1,3 @@
-// cppimport
 #include <omp.h>
 
 #include <algorithm>
@@ -457,8 +456,8 @@ ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
         }
     }
 
-    std::cout << valid_M << " valid triangles out of " << M << " in Q\n";
-    std::cout << valid_N << " valid triangles out of " << N << " in K\n";
+    // std::cout << valid_M << " valid triangles out of " << M << " in Q\n";
+    // std::cout << valid_N << " valid triangles out of " << N << " in K\n";
 
     /* now I can probably acquire the GIL again */
     py::gil_scoped_acquire omg;
@@ -488,7 +487,7 @@ ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
     return result;
 };
 
-PYBIND11_MODULE(builder3, m) {
+PYBIND11_MODULE(core, m) {
     m.def("construct_graph", &construct_graph,
           "Construct the graph from triangles of Q and K points",
           py::arg("q_pts"), py::arg("k_pts"),                 //
@@ -496,37 +495,3 @@ PYBIND11_MODULE(builder3, m) {
           py::arg("min_ratio") = MIN_RATIO_DEFAULT,           //
           py::arg("max_ratio") = MAX_RATIO_DEFAULT);
 }
-
-/*
- * ffast-math is bad in case there are rounding errors,
- * probably you should switch it off before worrying about
- * correctness issues.
- *
- * The issue is this:
- *
- *  - we'd like to ensure that the errors when calculating
- *  theta are zero, because we rely on all the differences
- *  between these theta values to construct the graph and
- *  performing the maximum clique routine.
- *
- *  - but calculating the theta values themselves is a big
- *  issue, because we have a lot of scaling/rescaling that
- *  goes on, and there are numerical issues in running the
- *  acos routine when you have scaling problems
- *
- *  - this is compounded by the fact that we get errors in
- *  the calculation of corner points, which makes it a bit
- *  more nasty, because now if there are errors extracting
- *  the corners, we compound these errors when calculating
- *  the theta values, and then USE DIFFERENCES WITH THESE
- *  VALUES TO DECIDE WHETHER THERE IS A MATCH OR NOT! HOW
- *  AM I SUPPOSED TO GET A LARGE CLIQUE FREE OF ERRORS IF
- *  THE ROUTINE I AM USING DEPENDS ON NO ERRORS DURING THE
- *  SETUP!
- *
-<%
-setup_pybind11(cfg)
-cfg['extra_compile_args']  = ["-fopenmp", "-ffast-math"]
-cfg['extra_link_args']  = ["-fopenmp", "-ffast-math"]
-%>
-*/
