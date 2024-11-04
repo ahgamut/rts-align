@@ -8,7 +8,11 @@ from matplotlib import pyplot as plt
 from matplotlib import animation
 from matplotlib.patches import Circle, ConnectionPatch
 from matplotlib.lines import Line2D
+import cliquematch
+#
+from rts_align import construct_graph
 
+### for the animation
 FRAMES_PER_MOD = 5
 START_OFFSET = 3 * FRAMES_PER_MOD
 STOP_OFFSET = 3 * FRAMES_PER_MOD
@@ -121,9 +125,6 @@ def show_points(Q, K, Q_corr, K_corr, order=2, num_steps=15, filename=None):
 
 
 def find_clique(q_pts, k_pts, delta=0.01):
-    from triples.builder3 import construct_graph
-    import cliquematch
-
     res = construct_graph(q_pts, k_pts, delta) != 0
     G = cliquematch.Graph.from_matrix(res)
     c = np.array(G.get_max_clique(), dtype=np.int32) - 1
