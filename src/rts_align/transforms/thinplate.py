@@ -4,10 +4,8 @@ from .affine import AffineTransform
 
 try:
     from ._utils_opt import tp_numbaized as tpfunc
-    from ._utils_opt import stp_numbaized as stpfunc
 except ImportError:
     from ._utils import tp_simple as tpfunc
-    from ._utils import stp_simple as stpfunc
 
 U = lambda x: x * x * np.log(x + 1e-10)
 Ur = lambda x: 0.5 * x * np.log(x + 1e-10)

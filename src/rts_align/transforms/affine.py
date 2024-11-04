@@ -2,10 +2,8 @@ import numpy as np
 
 try:
     from ._utils_opt import affine_numbaized as _affine
-    from ._utils_opt import s_affine_numbaized as s_affine
 except ImportError:
     from ._utils import affine_simple as _affine
-    from ._utils_opt import s_affine_simple as s_affine
 
 
 class AffineTransform:
