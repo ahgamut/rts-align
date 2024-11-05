@@ -96,7 +96,9 @@ def main():
     parser = argparse.ArgumentParser(
         "rts-sim-points-csv", description="check alignment of points", add_help=True
     )
-    parser.add_argument("-n", "--simulations", default=5, help="number of simulations")
+    parser.add_argument(
+        "-n", "--simulations", default=5, type=int, help="number of simulations"
+    )
     parser.add_argument(
         "-k", "--num-K", default=3, help="number of points that correspond", type=int
     )
