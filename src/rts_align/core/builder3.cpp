@@ -320,6 +320,8 @@ ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
     MIN_RATIO = min_ratio;
     MAX_RATIO = max_ratio;
 
+    /* delta is in radians */
+
     /* declare Point arrays and sizes */
     auto q0 = q_pts.unchecked<2>();
     auto k0 = k_pts.unchecked<2>();

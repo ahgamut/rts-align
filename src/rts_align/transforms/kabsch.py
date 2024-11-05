@@ -38,7 +38,8 @@ class KabschEstimate:
         det = np.linalg.det(Vt) * np.linalg.det(U)
         S[m-1, m-1] = 1 if det >= 0 else -1
 
-        scale = np.trace(np.diag(d) @ S) / src_var
+        # print(src_var, d)
+        scale = np.trace(np.diag(d) @ S) / (src_var + 1e-8)
         rotmat = (scale * (U @ S @ Vt)).T
         shift =  (-src_cent @ rotmat + dst_cent)
         # print(scale, rotmat, shift)
