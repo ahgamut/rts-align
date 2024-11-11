@@ -10,6 +10,7 @@ from matplotlib import animation
 from matplotlib.patches import Circle, ConnectionPatch
 from matplotlib.lines import Line2D
 import cliquematch
+
 #
 from rts_align import construct_graph
 from rts_align import KabschEstimate
@@ -126,10 +127,14 @@ def show_points(Q, K, Q_corr, K_corr, order=2, num_steps=15, filename=None):
     )
     plt.show()
     if filename:
-        ani.save(filename, writer="imagemagick", fps=30, dpi=200)
+        if filename.endswith(".mp4"):
+            ffwriter = animation.FFMpegWriter(fps=20)
+            ani.save(filename, writer=ffwriter)
+        else:
+            ani.save(filename, writer="imagemagick", fps=20, dpi=200)
 
 
-def find_clique(q_pts, k_pts, delta=0.01, epsilon=0.1):
+def find_clique(q_pts, k_pts, delta=5, epsilon=0.1):
     res = construct_graph(q_pts, k_pts, delta) != 0
     G = cliquematch.Graph.from_matrix(res)
     c = np.array(G.get_max_clique(), dtype=np.int32) - 1
