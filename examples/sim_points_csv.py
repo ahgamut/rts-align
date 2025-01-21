@@ -73,7 +73,7 @@ def find_clique(q_pts, k_pts, delta=0.01, epsilon=0.1):
     G2_ind = strip_graph(res1, l1)
     res2 = res1[G2_ind, :]
     res2 = res2[:, G2_ind]
-    # print(res1.shape, res2.shape)
+    print(res1.shape, res2.shape, l1)
     G2 = cliquematch.Graph.from_matrix(res2)
 
     c2 = (
@@ -112,16 +112,16 @@ def attempt(num_K, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1):
 
     # add noise
     q_pts = q_pts + noise_range * np.random.normal(0, 1, (len(q_pts), 2))
-    k_pts = k_pts + noise_range * np.random.normal(0, 1, (len(k_pts), 2))
+    k_pts = k_pts # + noise_range * np.random.normal(0, 1, (len(k_pts), 2))
 
     # find corresponding points and visualize
     qc, kc = find_clique(q_pts, k_pts, delta=delta, epsilon=epsilon)
     tform = KabschEstimate(kc, qc)
 
-    matched = 0
+    match_err = 0
     for i in range(len(qc)):
-        if np.linalg.norm(tform(kc[i]) - qc[i]) < 0.1:
-            matched += 1
+        match_err += np.linalg.norm(tform(kc[i]) - qc[i])
+    match_err /= len(qc)
 
     transl_est = tform.coefs[0, :]
     theta_est = np.arctan2(tform.coefs[1, 1], tform.coefs[1, 0])
@@ -129,6 +129,7 @@ def attempt(num_K, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1):
     res = dict()
     res["num_points"] = num_K
     res["num_outliers"] = num_extra
+    res["clique_size"] = len(qc)
     res["delta"] = delta
     res["epsilon"] = epsilon
     res["g_noise"] = noise_range
@@ -136,7 +137,7 @@ def attempt(num_K, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1):
     res["theta"] = theta
     res["dx"] = translation[0]
     res["dy"] = translation[1]
-    res["matched"] = matched
+    res["match_err"] = match_err
     res["zoom_est"] = zoom_est
     res["theta_est"] = theta_est
     res["dx_est"] = transl_est[0]
