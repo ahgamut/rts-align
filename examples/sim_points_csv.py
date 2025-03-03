@@ -9,6 +9,7 @@ import pandas as pd
 #
 from rts_align import construct_graph
 from rts_align import KabschEstimate
+from rts_align import find_clique
 
 
 def generate_points(n, md=10):
@@ -30,72 +31,6 @@ def rigid_form(pts, theta, d):
     return np.matmul(pts, rotmat) + d
 
 
-def strip_graph(mat, k):
-    deg = np.sum(mat | mat.T, axis=0) + 1
-    prev_n = len(mat)
-    removes = set(np.nonzero(deg < k)[0])
-    n = np.sum(deg >= k)
-    while n != prev_n:
-        # print(n)
-        for x in removes:
-            mat[x, :] = False
-            mat[:, x] = False
-        deg = np.sum(mat | mat.T, axis=0) + 1
-        prev_n = n
-        removes = set(np.nonzero(deg < k)[0]) - removes
-        n = np.sum(deg >= k)
-    return np.nonzero(deg >= k)[0]
-
-
-def find_clique(q_pts, k_pts, delta=0.01, epsilon=0.1):
-    delta = delta * np.pi / 180.0
-    qlen = len(q_pts)
-    klen = len(k_pts)
-
-    res0 = construct_graph(
-        q_pts, k_pts, delta=delta, epsilon=epsilon, max_ratio=10, min_ratio=0.1
-    )
-    res1 = res0 != 0
-    G1 = cliquematch.Graph.from_matrix(res1)
-    c1 = (
-        np.array(
-            G1.get_max_clique(
-                upper_bound=min(qlen, klen), use_dfs=False, use_heuristic=True
-            ),
-            dtype=np.int32,
-        )
-        - 1
-    )
-    l1 = len(c1)
-
-    # G1_deg = np.sum(res1 | res1.T, axis=0) + 1
-    # G2_ind = np.nonzero(G1_deg >= l1)[0]
-    G2_ind = strip_graph(res1, l1)
-    res2 = res1[G2_ind, :]
-    res2 = res2[:, G2_ind]
-    print(res1.shape, res2.shape, l1)
-    G2 = cliquematch.Graph.from_matrix(res2)
-
-    c2 = (
-        np.array(
-            G2.get_max_clique(
-                lower_bound=max(1, l1 - 1),
-                upper_bound=min(qlen, klen),
-                use_dfs=True,
-                use_heuristic=False,
-            ),
-            dtype=np.int32,
-        )
-        - 1
-    )
-    l2 = len(c2)
-    # print(l1, l2)
-    c_sub = G2_ind[c2]
-    qc = q_pts[c_sub // len(k_pts), :]
-    kc = k_pts[c_sub % len(k_pts), :]
-    return qc, kc
-
-
 def attempt(num_K, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1):
     k_pts = generate_points(num_K + num_extra)
 
@@ -112,7 +47,7 @@ def attempt(num_K, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1):
 
     # add noise
     q_pts = q_pts + noise_range * np.random.normal(0, 1, (len(q_pts), 2))
-    k_pts = k_pts # + noise_range * np.random.normal(0, 1, (len(k_pts), 2))
+    k_pts = k_pts  # + noise_range * np.random.normal(0, 1, (len(k_pts), 2))
 
     # find corresponding points and visualize
     qc, kc = find_clique(q_pts, k_pts, delta=delta, epsilon=epsilon)

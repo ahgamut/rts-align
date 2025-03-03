@@ -7,6 +7,7 @@ import cliquematch
 #
 from rts_align import construct_graph
 from rts_align import KabschEstimate
+from rts_align import find_clique
 
 
 def generate_points(n, md=10):
@@ -26,21 +27,6 @@ def generate_points(n, md=10):
 def rigid_form(pts, theta, d):
     rotmat = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
     return np.matmul(pts, rotmat) + d
-
-
-def find_clique(q_pts, k_pts, delta=0.01, epsilon=0.1):
-    delta = delta * np.pi / 180.0
-    res0 = construct_graph(
-        q_pts, k_pts, delta=delta, epsilon=epsilon, max_ratio=10, min_ratio=0.1
-    )
-    res = res0 != 0
-    G = cliquematch.Graph.from_matrix(res)
-    qlen = len(q_pts)
-    klen = len(k_pts)
-    c = np.array(G.get_max_clique(upper_bound=min(qlen, klen)), dtype=np.int32) - 1
-    qc = q_pts[c // len(k_pts), :]
-    kc = k_pts[c % len(k_pts), :]
-    return qc, kc
 
 
 def attempt(num_K, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1):
