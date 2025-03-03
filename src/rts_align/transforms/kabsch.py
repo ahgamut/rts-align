@@ -20,7 +20,7 @@ class KabschEstimate:
     @staticmethod
     def find_coefs(src, dst):
         coefs = np.zeros((3, 2), dtype=np.float32)
-        # kabsch algorithm to get rotation and translation
+        # kabsch algorithm to get rotation & translation
         # https://en.wikipedia.org/wiki/Kabsch_algorithm
         # following Umeyama's variant to calculate scale
         src_cent, src_norm = centerify(src)
