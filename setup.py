@@ -41,6 +41,8 @@ ext_modules = [
             str(get_pybind_include(False)),
             "src/rts_align/",
         ],
+        extra_compile_args=["-fopenmp"],
+        extra_link_args=["-fopenmp"],
         language="c++",
     )
 ]
@@ -51,7 +53,7 @@ class BuildExt(_build_ext):
 
     c_opts = {
         "msvc": ["/EHsc", "/openmp"],
-        "unix": ["-Wall", "-Wpedantic", "-Wno-unused-result", "-std=c++14", "-fopenmp"],
+        "unix": ["-Wall", "-Wpedantic", "-Wno-unused-result", "-std=c++14"],
     }
 
     if platform.system() == "Windows":
