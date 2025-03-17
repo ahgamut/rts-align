@@ -75,7 +75,7 @@ class BuildExt(_build_ext):
             opts = self.c_opts.get("unix")
 
         for ext in self.extensions:
-            ext.extra_compile_args = opts
+            ext.extra_compile_args = ext.extra_compile_args + opts
         _build_ext.build_extensions(self)
 
 

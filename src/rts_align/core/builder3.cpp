@@ -1,37 +1,4 @@
-#include <omp.h>
-
-#include <algorithm>
-#include <cmath>
-#include <cstdint>
-#include <cstdio>
-#include <cstring>
-#include <iostream>
-#include <set>
-#include <unordered_set>
-#include <utility>
-
-/* after headers, pybind */
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
-/* after pybind, numpy */
-#include <pybind11/numpy.h>
-
-namespace py = pybind11;
-
-template <typename T>
-using ndarray = py::array_t<T, py::array::c_style>;
-
-using u32 = uint32_t;
-using u64 = uint64_t;
-using u16 = uint16_t;
-using u8 = uint8_t;
-
-static constexpr double MIN_RATIO_DEFAULT = 0.5;
-static constexpr double MAX_RATIO_DEFAULT = 2.5;
-static constexpr double MIN_DIST = 1e-3;
-static constexpr double MIN_ANGLE = 5e-3;
-static constexpr double PI = 3.14159265358979;
-static constexpr u32 NUM_POINTS = 384; /* technically 1024 */
+#include <core/builder.h>
 
 static double MIN_RATIO = MIN_RATIO_DEFAULT;
 static double MAX_RATIO = MAX_RATIO_DEFAULT;
@@ -57,11 +24,6 @@ static double MAX_RATIO = MAX_RATIO_DEFAULT;
      (sr_compare##n((other)) <= (epsilon)) &&  \
      (side_ratio##n((other)) <= MAX_RATIO) &&  \
      (side_ratio##n((other)) >= MIN_RATIO))
-
-#define WEIGHTED_CMP(n, other, delta, epsilon)  \
-    (BINARY_CMP(n, (other), (delta), (epsilon)) \
-         ? (side_ratio##n((other)) / (delta))   \
-         : 0.0)
 
 #define NUM_THREADS 12
 #define ADJMAT_THREAD_SAFE 0
@@ -275,19 +237,9 @@ struct Triple {
         check[5] = BINARY_CMP(5, other, delta, epsilon);
     };
 
-    void weighted_compare(const Triple &other, double check[8], double delta,
-                          double epsilon) const {
-        for (int i = 0; i < 8; ++i) check[i] = 0;
-        check[0] = WEIGHTED_CMP(0, other, delta, epsilon);
-        check[1] = WEIGHTED_CMP(1, other, delta, epsilon);
-        check[2] = WEIGHTED_CMP(2, other, delta, epsilon);
-        check[3] = WEIGHTED_CMP(3, other, delta, epsilon);
-        check[4] = WEIGHTED_CMP(4, other, delta, epsilon);
-        check[5] = WEIGHTED_CMP(5, other, delta, epsilon);
-    };
 };
 
-void invert_combi(int n, int i, Triple *t, Point *p) {
+static void invert_combi(int n, int i, Triple *t, Point *p) {
     int x = 0;
     int y = 0;
     int z = 0;
@@ -488,12 +440,3 @@ ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
     /* send the answer back */
     return result;
 };
-
-PYBIND11_MODULE(core, m) {
-    m.def("construct_graph", &construct_graph,
-          "Construct the graph from triangles of Q and K points",
-          py::arg("q_pts"), py::arg("k_pts"),                 //
-          py::arg("delta") = 5e-3, py::arg("epsilon") = 0.1,  //
-          py::arg("min_ratio") = MIN_RATIO_DEFAULT,           //
-          py::arg("max_ratio") = MAX_RATIO_DEFAULT);
-}
