@@ -94,13 +94,15 @@ def find_all_cliques(q_pts, k_pts, delta=0.01, epsilon=0.1, lower_bound=3):
     res_basic = res_basic != 0
 
     c_set = []
-    try:
-        c = get_clique(res_basic, lower_bound, upper_bound=min(qlen, klen))
-        c_set.append(c)
-        res_basic[c, :] = False
-        res_basic[:, c] = False
-    except Exception:
-        pass
+    while True:
+        try:
+            c = get_clique(res_basic, lower_bound, upper_bound=min(qlen, klen))
+            c_set.append(c)
+            # print(np.sum(res_basic), len(c))
+            res_basic[c, :] = False
+            res_basic[:, c] = False
+        except Exception as e:
+            break
 
     res = []
     for c in c_set:
