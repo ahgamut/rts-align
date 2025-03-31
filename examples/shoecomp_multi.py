@@ -125,12 +125,16 @@ def save_outputs(output_dir, count, ipair, corr, prefix="align"):
     skio.imsave(k_path, k_sub)
 
 
-def runner(input_zip, delta, epsilon, lower_bound, rescale, visualize, output_dir=None):
+def runner(
+    input_zip, delta, epsilon, lower_bound, total, rescale, visualize, output_dir=None
+):
     zfile = zipfile.ZipFile(input_zip, "r")
     ipair = ImagePair(zfile, rescale=rescale)
     bname = os.path.basename(input_zip)
     bbase = os.path.splitext(bname)[0]
-    corr_list = find_all_cliques(ipair.Q_pts, ipair.K_pts, delta, epsilon, lower_bound)
+    corr_list = find_all_cliques(
+        ipair.Q_pts, ipair.K_pts, delta, epsilon, lower_bound, total
+    )
     for i, corr in enumerate(corr_list):
         fig = viz_alignment(i, ipair, corr, bname)
         if visualize:
@@ -169,6 +173,13 @@ def main():
         help="allow alignments containing at least these many points",
     )
     parser.add_argument(
+        "-t",
+        "--total",
+        default=10,
+        type=int,
+        help="stop after finding these many alignments",
+    )
+    parser.add_argument(
         "-r",
         "--rescale",
         default=1.0,
@@ -199,6 +210,7 @@ def main():
         delta=d.delta,
         epsilon=d.epsilon,
         lower_bound=d.lower_bound,
+        total=d.total,
         visualize=d.visualize,
         rescale=d.rescale,
         output_dir=d.output_dir if d.save_output else None,

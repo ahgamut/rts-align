@@ -83,7 +83,7 @@ def find_clique(q_pts, k_pts, delta=0.01, epsilon=0.1, lower_bound=3):
     return qc, kc
 
 
-def find_all_cliques(q_pts, k_pts, delta=0.01, epsilon=0.1, lower_bound=3):
+def find_all_cliques(q_pts, k_pts, delta=0.01, epsilon=0.1, lower_bound=3, total=10):
     delta = delta * np.pi / 180.0
     qlen = len(q_pts)
     klen = len(k_pts)
@@ -94,7 +94,7 @@ def find_all_cliques(q_pts, k_pts, delta=0.01, epsilon=0.1, lower_bound=3):
     res_basic = res_basic != 0
 
     c_set = []
-    while True:
+    while len(c_set) < total:
         try:
             c = get_clique(res_basic, lower_bound, upper_bound=min(qlen, klen))
             c_set.append(c)
