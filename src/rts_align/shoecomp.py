@@ -2,6 +2,7 @@
 import os
 import json
 import numpy as np
+from warnings import warn
 from numpy.typing import ArrayLike
 from typing import Optional
 from skimage import io as skio
@@ -73,6 +74,9 @@ class ImageDesc:
     def __init__(self, raw_img, mask, markup):
         self.raw_img = raw_img
         self.mask = mask != 0
+        if self.mask.min() == 0 and self.mask.max() == 0:
+            warn("mask is empty? assuming entire image is ok")
+            self.mask.fill(1)
         self.img = self.raw_img * self.mask
         self.markup = markup
         self.bounds = np.array(markup["bounds"], dtype=np.float32)
