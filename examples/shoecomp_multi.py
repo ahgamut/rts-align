@@ -129,14 +129,22 @@ def save_outputs(output_dir, count, ipair, corr, prefix="align"):
 
 
 def runner(
-    input_zip, delta, epsilon, lower_bound, total, rescale, visualize, output_dir=None
+    input_zip,
+    delta,
+    epsilon,
+    lower_bound,
+    total,
+    rescale,
+    heuristic,
+    visualize,
+    output_dir=None,
 ):
     zfile = zipfile.ZipFile(input_zip, "r")
     ipair = ImagePair(zfile, rescale=rescale)
     bname = os.path.basename(input_zip)
     bbase = os.path.splitext(bname)[0]
     corr_list = find_all_cliques(
-        ipair.Q_pts, ipair.K_pts, delta, epsilon, lower_bound, total
+        ipair.Q_pts, ipair.K_pts, delta, epsilon, lower_bound, total, heuristic
     )
     for i, corr in enumerate(corr_list):
         fig = viz_alignment(i, ipair, corr, bname)
@@ -197,6 +205,12 @@ def main():
         help="visualize alignments",
     )
     parser.add_argument(
+        "--heuristic",
+        dest="heuristic",
+        action="store_true",
+        help="do approximate clique search",
+    )
+    parser.add_argument(
         "-o", "--output-dir", default="./", help="folder to save aligned images"
     )
     parser.add_argument(
@@ -206,7 +220,9 @@ def main():
         action="store_false",
         help="avoid saving outputs (default)",
     )
-    parser.set_defaults(allow_all=False, visualize=False, save_output=True)
+    parser.set_defaults(
+        allow_all=False, visualize=False, save_output=True, heuristic=False
+    )
     d = parser.parse_args()
     runner(
         input_zip=d.input_zip,
@@ -216,6 +232,7 @@ def main():
         total=d.total,
         visualize=d.visualize,
         rescale=d.rescale,
+        heuristic=d.heuristic,
         output_dir=d.output_dir if d.save_output else None,
     )
 

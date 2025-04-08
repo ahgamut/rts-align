@@ -20,7 +20,7 @@ def strip_graph(mat, k):
     return np.nonzero(deg >= k)[0]
 
 
-def get_clique(adjmat, lower_bound, upper_bound):
+def get_clique(adjmat, lower_bound, upper_bound, heuristic=False):
     # first use the lower bound given
     G1_ind = strip_graph(adjmat, lower_bound)
     res1 = adjmat[G1_ind, :]
@@ -38,6 +38,8 @@ def get_clique(adjmat, lower_bound, upper_bound):
         )
         - 1
     )
+    if heuristic:
+        return G1_ind[c1]
     l1 = len(c1)
     lower_bound = max(lower_bound, l1 - 1)
 
@@ -67,7 +69,7 @@ def get_clique(adjmat, lower_bound, upper_bound):
     return c_sub
 
 
-def find_clique(q_pts, k_pts, delta=0.01, epsilon=0.1, lower_bound=3):
+def find_clique(q_pts, k_pts, delta=0.01, epsilon=0.1, lower_bound=3, heuristic=False):
     delta = delta * np.pi / 180.0
     qlen = len(q_pts)
     klen = len(k_pts)
@@ -77,13 +79,13 @@ def find_clique(q_pts, k_pts, delta=0.01, epsilon=0.1, lower_bound=3):
     )
     res_basic = res_basic != 0
 
-    c = get_clique(res_basic, lower_bound, upper_bound=min(qlen, klen))
+    c = get_clique(res_basic, lower_bound, upper_bound=min(qlen, klen), heuristic=heuristic)
     qc = q_pts[c // len(k_pts), :]
     kc = k_pts[c % len(k_pts), :]
     return qc, kc
 
 
-def find_all_cliques(q_pts, k_pts, delta=0.01, epsilon=0.1, lower_bound=3, total=10):
+def find_all_cliques(q_pts, k_pts, delta=0.01, epsilon=0.1, lower_bound=3, total=10, heuristic=False):
     delta = delta * np.pi / 180.0
     qlen = len(q_pts)
     klen = len(k_pts)
@@ -96,7 +98,7 @@ def find_all_cliques(q_pts, k_pts, delta=0.01, epsilon=0.1, lower_bound=3, total
     c_set = []
     while len(c_set) < total:
         try:
-            c = get_clique(res_basic, lower_bound, upper_bound=min(qlen, klen))
+            c = get_clique(res_basic, lower_bound, upper_bound=min(qlen, klen), heuristic=heuristic)
             c_set.append(c)
             # print(np.sum(res_basic), len(c))
             res_basic[c, :] = False
