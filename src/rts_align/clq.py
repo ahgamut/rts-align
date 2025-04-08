@@ -89,7 +89,7 @@ def find_all_cliques(q_pts, k_pts, delta=0.01, epsilon=0.1, lower_bound=3, total
     klen = len(k_pts)
 
     res_basic = construct_graph(
-        q_pts, k_pts, delta=delta, epsilon=epsilon, max_ratio=10, min_ratio=0.1
+        q_pts, k_pts, delta=delta, epsilon=epsilon, max_ratio=2.5, min_ratio=1/2.5
     )
     res_basic = res_basic != 0
 
