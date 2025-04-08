@@ -4,6 +4,7 @@ import argparse
 import zipfile
 import numpy as np
 import skimage.io as skio
+import skimage.filters as skfilt
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, ConnectionPatch
 from matplotlib.lines import Line2D
@@ -20,7 +21,7 @@ COLORDICT = {
     "red": [[0.0, 0.612, 0.612], [1.0, 0.561, 0.561]],
     "green": [[0.0, 0.149, 0.149], [1.0, 0.149, 0.149]],
     "blue": [[0.0, 0.561, 0.561], [1.0, 0.561, 0.561]],
-    "alpha": [[0.0, 0.55, 0.55], [0.95, 0.55, 0.55], [1.0, 0.0, 0.0]],
+    "alpha": [[0.0, 0.55, 0.55], [0.25, 0.55, 0.55], [1.0, 0.0, 0.0]],
 }
 COLORMAP = LinearSegmentedColormap("k_over", segmentdata=COLORDICT, N=256)
 
@@ -50,6 +51,8 @@ def viz_alignment(count, ipair, corr, title="alignment"):
     fig, axs = plt.subplots(1, 3)
     axs = axs.ravel()
 
+    thr = lambda x: x > 0.8 * skfilt.threshold_otsu(x)
+
     Q_corr = corr["Q"]
     K_corr = corr["K"]
 
@@ -68,7 +71,7 @@ def viz_alignment(count, ipair, corr, title="alignment"):
     axs[1].axis("off")
 
     axs[2].imshow(q, cmap="Greys_r")
-    axs[2].imshow(mapped_k[:, :, 0], cmap=COLORMAP)
+    axs[2].imshow(thr(mapped_k[:, :, 0]), cmap=COLORMAP)
     axs[2].set_title("mapped K on Q")
     axs[2].set_xlim(o_rect["x"])
     axs[2].set_ylim(o_rect["y"][::-1])
