@@ -321,7 +321,9 @@ ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
         adjmat[zz] = 0;
     }
 
-#pragma omp parallel num_threads(NUM_THREADS)
+    int n_threads = omp_get_max_threads();
+
+#pragma omp parallel num_threads(n_threads)
     {
         u32 ix, iy;
         u8 check[8] = {0};
