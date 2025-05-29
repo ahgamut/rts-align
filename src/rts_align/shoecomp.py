@@ -9,6 +9,7 @@ from skimage import io as skio
 from skimage import util as skutil
 from skimage import transform as sktrans
 from skimage import measure as skmeas
+from skimage import draw as skdraw
 
 #
 from rts_align.transforms import KabschEstimate
@@ -73,14 +74,19 @@ class ImageComp:
 class ImageDesc:
     def __init__(self, raw_img, mask, markup):
         self.raw_img = raw_img
-        self.mask = mask != 0
-        if self.mask.min() == 0 and self.mask.max() == 0:
-            warn("mask is empty? assuming entire image is ok")
-            self.mask.fill(1)
-        self.img = self.raw_img * self.mask
         self.markup = markup
-        self.bounds = np.array(markup["bounds"], dtype=np.float32)
         self.points = np.array(markup["points"], dtype=np.float32)
+        self.bounds = np.array(markup.get("bounds", []), dtype=np.float32)[:, [1, 0]]
+        self.mask = mask != 0
+
+        if self.mask.min() == 0 and self.mask.max() == 0:
+            if len(self.bounds) > 0:
+                b2 = np.array(self.bounds, dtype=np.int32)
+                self.mask = skdraw.polygon2mask(mask.shape, b2) != 0
+            else:
+                warn("mask is empty? assuming entire image is ok")
+                self.mask.fill(1)
+        self.img = self.raw_img * self.mask
 
     def rescale(self, f=1.0):
         self.raw_img = sktrans.rescale(self.raw_img, f, channel_axis=2, anti_aliasing=False)
@@ -161,6 +167,14 @@ class ImagePair:
     @property
     def K_pts(self):
         return self._korig.points
+
+    @property
+    def Q_bounds(self):
+        return self._qorig.bounds
+
+    @property
+    def K_bounds(self):
+        return self._korig.bounds
 
     @property
     def Q_mask(self):

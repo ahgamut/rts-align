@@ -26,8 +26,11 @@ COLORDICT = {
 COLORMAP = LinearSegmentedColormap("k_over", segmentdata=COLORDICT, N=256)
 
 
-def boundify(msk):
-    yv, xv = np.nonzero(msk[:, :, 0])
+def boundify(msk, bounds):
+    if len(bounds) > 0:
+        yv, xv = bounds[:, 0], bounds[:, 1]
+    else:
+        yv, xv = np.nonzero(msk[:, :, 0])
     return {"x": (xv.min(), xv.max()), "y": (yv.min(), yv.max())}
 
 
@@ -44,9 +47,9 @@ def viz_alignment(count, ipair, corr, title="alignment"):
     q = ipair.Q_img * ovr_mask
     mapped_k = mapped_k * ovr_mask + 1.0 * ~ovr_mask
 
-    k_rect = boundify(ipair.K_mask != 0)
-    q_rect = boundify(ipair.Q_mask != 0)
-    o_rect = boundify(ovr_mask)
+    k_rect = boundify(ipair.K_mask != 0, ipair.K_bounds)
+    q_rect = boundify(ipair.Q_mask != 0, ipair.Q_bounds)
+    o_rect = boundify(ovr_mask, [])
 
     fig, axs = plt.subplots(1, 3)
     axs = axs.ravel()
