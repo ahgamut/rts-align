@@ -149,6 +149,12 @@ def runner(
     corr_list = find_all_cliques(
         ipair.Q_pts, ipair.K_pts, delta, epsilon, lower_bound, total, heuristic
     )
+    num_corr = len(corr_list)
+    if num_corr == 0:
+        print("zero alignments found")
+    else:
+        print(num_corr, "alignments found")
+
     for i, corr in enumerate(corr_list):
         fig = viz_alignment(i, ipair, corr, bname)
         if visualize:
