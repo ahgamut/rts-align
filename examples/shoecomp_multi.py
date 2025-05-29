@@ -111,7 +111,7 @@ def save_outputs(output_dir, count, ipair, corr, prefix="align"):
 
     q = ipair.Q_img * ovr_mask
     mapped_k = mapped_k * ovr_mask
-    o_rect = boundify(ovr_mask)
+    o_rect = boundify(ovr_mask, [])
 
     q_sub = np.uint8(
         255
