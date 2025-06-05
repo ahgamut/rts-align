@@ -45,6 +45,10 @@ def attempt(num_K, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1):
         q_extra = generate_points(num_extra)
         q_pts = np.row_stack([q_pts, q_extra])
 
+    # shuffle the points
+    np.random.shuffle(q_pts)
+    np.random.shuffle(k_pts)
+
     # add noise
     q_pts = q_pts + noise_range * np.random.normal(0, 1, (len(q_pts), 2))
     k_pts = k_pts  # + noise_range * np.random.normal(0, 1, (len(k_pts), 2))
