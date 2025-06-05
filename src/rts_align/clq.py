@@ -1,3 +1,4 @@
+import time
 import numpy as np
 import cliquematch
 from rts_align.core import construct_graph
@@ -74,31 +75,50 @@ def find_clique(q_pts, k_pts, delta=0.01, epsilon=0.1, lower_bound=3, heuristic=
     qlen = len(q_pts)
     klen = len(k_pts)
 
+    # timer
+    start_time = time.time()
+
     res_basic = construct_graph(
         q_pts, k_pts, delta=delta, epsilon=epsilon, max_ratio=10, min_ratio=0.1
     )
+
+    # timer
+    mid_time = time.time()
+
     res_basic = res_basic != 0
 
-    c = get_clique(res_basic, lower_bound, upper_bound=min(qlen, klen), heuristic=heuristic)
-    qc = q_pts[c // len(k_pts), :]
-    kc = k_pts[c % len(k_pts), :]
-    return qc, kc
+    c = get_clique(
+        res_basic, lower_bound, upper_bound=min(qlen, klen), heuristic=heuristic
+    )
+
+    # timer
+    end_time = time.time()
+
+    res = dict()
+    res["qc"] = q_pts[c // len(k_pts), :]
+    res["kc"] = k_pts[c % len(k_pts), :]
+    res["tm"] = {"start": start_time, "mid": mid_time, "end": end_time}
+    return res
 
 
-def find_all_cliques(q_pts, k_pts, delta=0.01, epsilon=0.1, lower_bound=3, total=10, heuristic=False):
+def find_all_cliques(
+    q_pts, k_pts, delta=0.01, epsilon=0.1, lower_bound=3, total=10, heuristic=False
+):
     delta = delta * np.pi / 180.0
     qlen = len(q_pts)
     klen = len(k_pts)
 
     res_basic = construct_graph(
-        q_pts, k_pts, delta=delta, epsilon=epsilon, max_ratio=2.5, min_ratio=1/2.5
+        q_pts, k_pts, delta=delta, epsilon=epsilon, max_ratio=2.5, min_ratio=1 / 2.5
     )
     res_basic = res_basic != 0
 
     c_set = []
     while len(c_set) < total:
         try:
-            c = get_clique(res_basic, lower_bound, upper_bound=min(qlen, klen), heuristic=heuristic)
+            c = get_clique(
+                res_basic, lower_bound, upper_bound=min(qlen, klen), heuristic=heuristic
+            )
             c_set.append(c)
             # print(np.sum(res_basic), len(c))
             res_basic[c, :] = False

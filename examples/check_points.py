@@ -48,7 +48,8 @@ def attempt(num_K, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1):
     k_pts = k_pts + noise_range * np.random.normal(0, 1, (len(k_pts), 2))
 
     # find corresponding points and visualize
-    qc, kc = find_clique(q_pts, k_pts, delta=delta, epsilon=epsilon)
+    res = find_clique(q_pts, k_pts, delta=delta, epsilon=epsilon)
+    qc, kc = res["qc"], res["kc"]
     tform = KabschEstimate(kc, qc)
 
     transl_est = tform.coefs[0, :]

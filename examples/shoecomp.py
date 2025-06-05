@@ -128,7 +128,8 @@ def save_outputs(output_dir, ipair, corr, prefix="align"):
 def runner(input_zip, delta, epsilon, lower_bound, rescale, visualize, output_dir=None):
     zfile = zipfile.ZipFile(input_zip, "r")
     ipair = ImagePair(zfile, rescale=rescale)
-    q_corr, k_corr = find_clique(ipair.Q_pts, ipair.K_pts, delta, epsilon, lower_bound)
+    res = find_clique(ipair.Q_pts, ipair.K_pts, delta, epsilon, lower_bound)
+    q_corr, k_corr = res["qc"], res["kc"]
     corr = dict(Q=q_corr, K=k_corr)
     bname = os.path.basename(input_zip)
     bbase = os.path.splitext(bname)[0]
