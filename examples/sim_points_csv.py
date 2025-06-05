@@ -5,6 +5,7 @@ import itertools
 import numpy as np
 import cliquematch
 import pandas as pd
+import time
 
 #
 from rts_align import construct_graph
@@ -49,9 +50,15 @@ def attempt(num_K, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1):
     q_pts = q_pts + noise_range * np.random.normal(0, 1, (len(q_pts), 2))
     k_pts = k_pts  # + noise_range * np.random.normal(0, 1, (len(k_pts), 2))
 
+    # timer
+    start_time = time.time()
+
     # find corresponding points and visualize
     qc, kc = find_clique(q_pts, k_pts, delta=delta, epsilon=epsilon)
     tform = KabschEstimate(kc, qc)
+
+    # timer
+    end_time = time.time()
 
     match_err = 0
     for i in range(len(qc)):
@@ -77,6 +84,7 @@ def attempt(num_K, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1):
     res["theta_est"] = theta_est
     res["dx_est"] = transl_est[0]
     res["dy_est"] = transl_est[1]
+    res["time"] = float(end_time - start_time)
     print(res, file=sys.stderr)
     return res
 
