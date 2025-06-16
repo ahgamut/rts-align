@@ -332,10 +332,16 @@ def main():
 
     d = parser.parse_args()
     result = []
-    for i in range(d.simulations):
-        print(i, file=sys.stderr)
-        r = attempt(d.num_K, d.num_extra, d.noise_add, d.delta, d.epsilon)
-        result.append(r)
+    i = 0
+    while i < d.simulations:
+        try:
+            print(i, file=sys.stderr)
+            r = attempt(d.num_K, d.num_extra, d.noise_add, d.delta, d.epsilon)
+            result.append(r)
+        except Exception as e:
+            print("attempt failure", e)
+            i -= 1
+        i += 1
 
     df = pd.DataFrame(result)
     df.to_csv(d.output_csv, index=False, header=True)
