@@ -4,17 +4,19 @@ import cliquematch
 from rts_align.core import construct_graph
 
 
-def strip_graph(mat, k):
-    deg = np.sum(mat | mat.T, axis=0) + 1
+def strip_graph(mat0, k):
+    mat = mat0 | mat0.T
+    np.fill_diagonal(mat, 1)
+    deg = np.sum(mat | mat.T, axis=0)
     prev_n = len(mat)
     removes = set(np.nonzero(deg < k)[0])
     n = np.sum(deg >= k)
     while n != prev_n:
-        # print(n)
         for x in removes:
             mat[x, :] = False
             mat[:, x] = False
-        deg = np.sum(mat | mat.T, axis=0) + 1
+            mat[x, x] = True
+        deg = np.sum(mat | mat.T, axis=0)
         prev_n = n
         removes = set(np.nonzero(deg < k)[0]) - removes
         n = np.sum(deg >= k)
@@ -39,7 +41,7 @@ def get_clique(adjmat, lower_bound, upper_bound, heuristic=False):
         )
         - 1
     )
-    if heuristic:
+    if heuristic or (len(c1) == upper_bound):
         return G1_ind[c1]
     l1 = len(c1)
     lower_bound = max(lower_bound, l1 - 1)
