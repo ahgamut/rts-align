@@ -13,19 +13,10 @@ from rts_align import KabschEstimate
 from rts_align import find_clique
 from rts_align.clq import get_clique
 
-# https://github.com/yangjiaolong/Go-ICP
-# via https://github.com/aalavandhaann/go-icp_cython
-# 4568dd976fc5a63246835edbc748f35bc483f409
-import py_goicp
-
 # https://github.com/ariarobotics/clipperp
 # a524943411bf6635219ab510864c81aa1b6a0c7a
 # (patch headers in python bindings)
 import clipperpluspy
-
-# https://github.com/MIT-SPARK/TEASER-plusplus
-# f91cfdb7baed951a3607257bd31f3f6694773497
-import teaserpp_python
 
 
 def generate_points(n, md=10):
@@ -45,79 +36,6 @@ def generate_points(n, md=10):
 def rigid_form(pts, theta, d):
     rotmat = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
     return np.matmul(pts, rotmat) + d
-
-
-###
-
-
-def make_p3d_list(arr, msize):
-    N = len(arr)
-    res = []
-    for i in range(N):
-        x, y = (arr[i, :]) / (1.2 * msize)  # all values inside [-1, 1]
-        res.append(py_goicp.POINT3D(x, y, 0.0))
-    return N, res
-
-
-def goicp_estim(q_pts, k_pts, outlier_frac):
-    msize = max(np.max(np.abs(q_pts)), np.max(np.abs(k_pts)))
-    Nq, qp = make_p3d_list(q_pts, msize)
-    Nk, kp = make_p3d_list(k_pts, msize)
-
-    mod = py_goicp.GoICP()
-    mod.MSEThresh = 0.0001
-    mod.trimFraction = outlier_frac
-    start_time = time.time()
-
-    mod.loadModelAndData(Nk, kp, Nq, qp)
-    mod.setDTSizeAndFactor(300, 2.0)
-    mod.BuildDT()
-    mod.Register()
-
-    end_time = time.time()
-    scale = np.linalg.det(mod.optimalRotation())
-    rotmat = np.array(mod.optimalRotation())[:2, :2]
-    trans0 = np.array(mod.optimalTranslation())[:2] * 1.2 * msize
-    transl = -np.matmul(rotmat.T, trans0)
-
-    sol = dict()
-    sol["goicp_zoom"] = scale
-    sol["goicp_theta"] = np.arctan2(rotmat[0, 1], rotmat[0, 0])
-    sol["goicp_theta2"] = np.arctan2(rotmat.T[0, 1], rotmat.T[0, 0])
-    sol["goicp_dx"] = transl[0]
-    sol["goicp_dy"] = transl[1]
-    sol["goicp_time"] = float(end_time - start_time)
-    return sol
-
-
-def goicp_estim2(q_pts, k_pts, outlier_frac, scale):
-    msize = max(np.max(np.abs(q_pts)), np.max(np.abs(k_pts * scale)))
-    Nq, qp = make_p3d_list(q_pts, msize)
-    Nk, kp = make_p3d_list(k_pts * scale, msize)
-
-    mod = py_goicp.GoICP()
-    mod.MSEThresh = 0.0001
-    mod.trimFraction = 0.5
-    start_time = time.time()
-
-    mod.loadModelAndData(Nk, kp, Nq, qp)
-    mod.setDTSizeAndFactor(300, 2.0)
-    mod.BuildDT()
-    mod.Register()
-
-    end_time = time.time()
-    rotmat = np.array(mod.optimalRotation())[:2, :2]
-    trans0 = np.array(mod.optimalTranslation())[:2] * 1.2 * msize
-    transl = -np.matmul(rotmat.T, trans0)
-
-    sol = dict()
-    sol["goicp-scaled_zoom"] = scale
-    sol["goicp-scaled_theta"] = np.arctan2(rotmat[0, 1], rotmat[0, 0])
-    sol["goicp-scaled_theta2"] = np.arctan2(rotmat.T[0, 1], rotmat.T[0, 0])
-    sol["goicp-scaled_dx"] = transl[0]
-    sol["goicp-scaled_dy"] = transl[1]
-    sol["goicp-scaled_time"] = float(end_time - start_time)
-    return sol
 
 
 ####
@@ -169,58 +87,6 @@ def clipperp_estim(q_pts, k_pts, delta, epsilon):
 #####
 
 
-def teaser_estim(q_pts, k_pts, noise_range):
-    dst = np.column_stack([q_pts, 0 * np.ones(len(q_pts))]).T
-    src = np.column_stack([k_pts, 0 * np.ones(len(k_pts))]).T
-
-    solver_params = teaserpp_python.RobustRegistrationSolver.Params()
-    solver_params.cbar2 = 1
-    solver_params.noise_bound = 5 * noise_range
-    solver_params.estimate_scaling = True
-    solver_params.rotation_estimation_algorithm = (
-        teaserpp_python.RobustRegistrationSolver.ROTATION_ESTIMATION_ALGORITHM.GNC_TLS
-    )
-    solver_params.rotation_tim_graph = (
-        teaserpp_python.RobustRegistrationSolver.INLIER_GRAPH_FORMULATION.COMPLETE
-    )
-    solver_params.inlier_selection_mode = (
-        teaserpp_python.RobustRegistrationSolver.INLIER_SELECTION_MODE.PMC_EXACT
-    )
-    solver_params.rotation_gnc_factor = 1.4
-    solver_params.rotation_max_iterations = 1000
-    solver_params.rotation_cost_threshold = 1e-12
-    solver_params.kcore_heuristic_threshold = 1.0
-
-    solver = teaserpp_python.RobustRegistrationSolver(solver_params)
-    start = time.time()
-    solver.solve(src, dst)
-    end = time.time()
-
-    solution = solver.getSolution()
-
-    sol = dict()
-    sol["teaser_zoom"] = solution.scale
-    rotmat = solution.rotation[:2, :2]
-    sol["teaser_theta"] = np.arctan2(rotmat[1, 0], rotmat[1, 1])
-    sol["teaser_theta2"] = np.arctan2(rotmat.T[1, 0], rotmat.T[1, 1])
-    sol["teaser_dx"] = solution.translation[0]
-    sol["teaser_dy"] = solution.translation[1]
-    sol["teaser_time"] = float(end - start)
-    return sol
-
-
-def teaser2_estim(q_pts, k_pts, noise_range):
-    sol0 = teaser_estim(q_pts, k_pts, noise_range)
-    sol = dict()
-    for k, v in sol0.items():
-        k2 = k.replace("teaser", "teaser-noshuf")
-        sol[k2] = v
-    return sol
-
-
-#####
-
-
 def rts_estim(q_pts, k_pts, delta, epsilon):
     # find corresponding points and visualize
     sol0 = find_clique(q_pts, k_pts, delta=delta, epsilon=epsilon)
@@ -263,9 +129,6 @@ def attempt(num_K, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1):
     q_pts = q_pts + noise_range * np.random.normal(0, 1, (len(q_pts), 2))
     k_pts = k_pts
 
-    # mappings that require correspondence
-    sol_teaser2 = teaser2_estim(q_pts, k_pts, noise_range)
-
     # shuffle the points
     np.random.shuffle(q_pts)
     np.random.shuffle(k_pts)
@@ -273,10 +136,6 @@ def attempt(num_K, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1):
     # mappings that don't require correspondence
     sol_rts = rts_estim(q_pts, k_pts, delta, epsilon)
     sol_clipperp = clipperp_estim(q_pts, k_pts, delta, epsilon)
-    sol_teaser1 = teaser_estim(q_pts, k_pts, noise_range)
-    outlier_frac = (1 + num_extra) / (1 + len(k_pts))
-    sol_goicp1 = goicp_estim(q_pts, k_pts, outlier_frac)
-    sol_goicp2 = goicp_estim2(q_pts, k_pts, outlier_frac, zoom)
 
     # add entries
     res = dict()
@@ -290,12 +149,8 @@ def attempt(num_K, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1):
     res["dx"] = translation[0]
     res["dy"] = translation[1]
 
-    res.update(sol_teaser1)
-    res.update(sol_teaser2)
     res.update(sol_rts)
     res.update(sol_clipperp)
-    res.update(sol_goicp1)
-    res.update(sol_goicp2)
     print(res, file=sys.stderr)
     return res
 
