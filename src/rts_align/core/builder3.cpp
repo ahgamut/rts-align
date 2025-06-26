@@ -14,7 +14,7 @@ static double MAX_RATIO = MAX_RATIO_DEFAULT;
     EUCDIST_METRIC((a1), (a2), (b1), (b2), (c1), (c2));
 
 #define SRAT_COMPARE(a1, a2, b1, b2, c1, c2) \
-    TAXICAB_METRIC((a1), (a2), (b1), (b2), (c1), (c2));
+    EUCDIST_METRIC((a1), (a2), (b1), (b2), (c1), (c2));
 
 #define SIDE_RATIO(a1, a2, b1, b2, c1, c2) \
     (((a1) / (a2) + (b1) / (b2) + (c1) / (c2)) / 3);
@@ -26,7 +26,7 @@ static double MAX_RATIO = MAX_RATIO_DEFAULT;
      (side_ratio##n((other)) >= MIN_RATIO))
 
 #define NUM_THREADS 12
-#define ADJMAT_THREAD_SAFE 0
+#define ADJMAT_THREAD_SAFE 1
 
 static inline double stable_angle(double u1, double u2, double v1, double v2) {
     // https://people.eecs.berkeley.edu/~wkahan/MathH110/Cross.pdf
