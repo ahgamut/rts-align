@@ -3,9 +3,11 @@ import argparse
 import math
 import itertools
 import numpy as np
-import cliquematch
 import pandas as pd
 import time
+
+# https://github.com/ahgamut/cliquematch/tree/devel
+import cliquematch
 
 #
 from rts_align import construct_graph
