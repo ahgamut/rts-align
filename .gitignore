@@ -8,6 +8,7 @@ __pycache__/
 *$py.class
 .rendered*
 *.gif
+!visualize/points-viz.gif
 *.mp4
 *.jpg
 *.JPG
