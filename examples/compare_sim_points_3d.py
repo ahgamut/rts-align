@@ -59,6 +59,23 @@ def make_rotmat():
     return q, R
 
 
+def rotmat_to_angles(rotmat):
+    # https://learnopencv.com/rotation-matrix-to-euler-angles/
+    sy = np.sqrt(rotmat[0, 0] * rotmat[0, 0] + rotmat[1, 0] * rotmat[1, 0])
+    singular = sy < 1e-6
+
+    if singular:
+        roll = np.arctan2(-rotmat[1, 2], rotmat[1, 1])
+        pitch = np.arctan2(-rotmat[2, 0], sy)
+        yaw = 0
+    else:
+        roll = np.arctan2(rotmat[2, 1], rotmat[2, 2])
+        pitch = np.arctan2(-rotmat[2, 0], sy)
+        yaw = np.arctan2(rotmat[1, 0], rotmat[0, 0])
+
+    return roll, pitch, yaw
+
+
 def rigid_form(pts, rotmat, d):
     return np.matmul(pts, rotmat) + d
 
@@ -93,13 +110,15 @@ def goicp_estim(q_pts, k_pts, outlier_frac):
     end_time = time.time()
     scale = np.linalg.det(mod.optimalRotation())
     rotmat = np.array(mod.optimalRotation())
+    roll, pitch, yaw = rotmat_to_angles(rotmat)
     trans0 = np.array(mod.optimalTranslation()) * 1.2 * msize
     transl = -np.matmul(rotmat.T, trans0)
 
     sol = dict()
     sol["goicp_zoom"] = scale
-    sol["goicp_theta"] = np.arctan2(rotmat[0, 1], rotmat[0, 0])
-    sol["goicp_theta2"] = np.arctan2(rotmat.T[0, 1], rotmat.T[0, 0])
+    sol["goicp_roll"] = roll
+    sol["goicp_pitch"] = pitch
+    sol["goicp_yaw"] = yaw
     sol["goicp_dx"] = transl[0]
     sol["goicp_dy"] = transl[1]
     sol["goicp_dz"] = transl[2]
@@ -124,13 +143,15 @@ def goicp_estim2(q_pts, k_pts, outlier_frac, scale):
 
     end_time = time.time()
     rotmat = np.array(mod.optimalRotation())
+    roll, pitch, yaw = rotmat_to_angles(rotmat)
     trans0 = np.array(mod.optimalTranslation()) * 1.2 * msize
     transl = -np.matmul(rotmat.T, trans0)
 
     sol = dict()
     sol["goicp-scaled_zoom"] = scale
-    sol["goicp-scaled_theta"] = np.arctan2(rotmat[0, 1], rotmat[0, 0])
-    sol["goicp-scaled_theta2"] = np.arctan2(rotmat.T[0, 1], rotmat.T[0, 0])
+    sol["goicp-scaled_roll"] = roll
+    sol["goicp-scaled_pitch"] = pitch
+    sol["goicp-scaled_yaw"] = yaw
     sol["goicp-scaled_dx"] = transl[0]
     sol["goicp-scaled_dy"] = transl[1]
     sol["goicp-scaled_dz"] = transl[2]
@@ -170,12 +191,15 @@ def clipperp_estim(q_pts, k_pts, delta, epsilon):
 
     tform = KabschEstimate(kc, qc)
     transl_est = tform.coefs[0, :]
-    theta_est = np.arctan2(tform.coefs[1, 1], tform.coefs[1, 0])
-    zoom_est = np.linalg.det(tform.coefs[1:, :]) ** ( 1/ 3)
+    rotmat = tform.coefs[1:, :]
+    roll, pitch, yaw = rotmat_to_angles(rotmat)
+    zoom_est = np.linalg.det(tform.coefs[1:, :]) ** (1 / 3)
 
     sol = dict()
     sol["clipperp_zoom"] = zoom_est
-    sol["clipperp_theta"] = theta_est
+    sol["clipperp_roll"] = roll
+    sol["clipperp_pitch"] = pitch
+    sol["clipperp_yaw"] = yaw
     sol["clipperp_dx"] = transl_est[0]
     sol["clipperp_dy"] = transl_est[1]
     sol["clipperp_dz"] = transl_est[2]
@@ -216,12 +240,14 @@ def teaser_estim(q_pts, k_pts, noise_range):
     end = time.time()
 
     solution = solver.getSolution()
+    rotmat = solution.rotation
+    roll, pitch, yaw = rotmat_to_angles(rotmat)
 
     sol = dict()
     sol["teaser_zoom"] = solution.scale
-    rotmat = solution.rotation[:2, :2]
-    sol["teaser_theta"] = np.arctan2(rotmat[1, 0], rotmat[1, 1])
-    sol["teaser_theta2"] = np.arctan2(rotmat.T[1, 0], rotmat.T[1, 1])
+    sol["teaser_roll"] = roll
+    sol["teaser_pitch"] = pitch
+    sol["teaser_yaw"] = yaw
     sol["teaser_dx"] = solution.translation[0]
     sol["teaser_dy"] = solution.translation[1]
     sol["teaser_dz"] = solution.translation[2]
@@ -248,12 +274,15 @@ def rts_estim(q_pts, k_pts, delta, epsilon):
     tform = KabschEstimate(kc, qc)
 
     transl_est = tform.coefs[0, :]
-    theta_est = np.arctan2(tform.coefs[1, 1], tform.coefs[1, 0])
-    zoom_est = np.linalg.det(tform.coefs[1:, :]) ** (1/3)
+    rotmat = tform.coefs[1:, :]
+    roll, pitch, yaw = rotmat_to_angles(rotmat)
+    zoom_est = np.linalg.det(tform.coefs[1:, :]) ** (1 / 3)
 
     sol = dict()
     sol["rts_zoom"] = zoom_est
-    sol["rts_theta"] = theta_est
+    sol["rts_roll"] = roll
+    sol["rts_pitch"] = pitch
+    sol["rts_yaw"] = yaw
     sol["rts_dx"] = transl_est[0]
     sol["rts_dy"] = transl_est[1]
     sol["rts_dz"] = transl_est[2]
@@ -271,8 +300,9 @@ def attempt(num_K, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1):
 
     # randomly select R/T/S
     zoom = np.random.uniform(1 / 5.2, 5.2)
-    theta, rotmat = make_rotmat()
-    translation = np.random.randint(-75, 75, 3)
+    qua, rotmat = make_rotmat()
+    roll, pitch, yaw = rotmat_to_angles(rotmat)
+    translation = np.random.uniform(-75, 75, 3)
     q_pts = rigid_form(k_pts[:num_K, :] * zoom, rotmat, translation)
 
     # add extra points
@@ -307,7 +337,9 @@ def attempt(num_K, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1):
     res["epsilon"] = epsilon
     res["g-noise"] = noise_range
     res["zoom"] = zoom
-    res["theta"] = theta[0]
+    res["roll"] = roll
+    res["pitch"] = pitch
+    res["yaw"] = yaw
     res["dx"] = translation[0]
     res["dy"] = translation[1]
     res["dz"] = translation[2]
@@ -356,13 +388,13 @@ def main():
     result = []
     i = 0
     while i < d.simulations:
-        #try:
-        print(i, file=sys.stderr)
-        r = attempt(d.num_K, d.num_extra, d.noise_add, d.delta, d.epsilon)
-        result.append(r)
-        # except Exception as e:
-        #    print("attempt failure", i, e)
-        #    i -= 1
+        try:
+            print(i, file=sys.stderr)
+            r = attempt(d.num_K, d.num_extra, d.noise_add, d.delta, d.epsilon)
+            result.append(r)
+        except Exception as e:
+           print("attempt failure", i, e)
+           i -= 1
         i += 1
 
     df = pd.DataFrame(result)
