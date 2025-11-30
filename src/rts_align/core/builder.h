@@ -34,8 +34,11 @@ static constexpr double MIN_ANGLE = 5e-3;
 static constexpr double PI = 3.14159265358979;
 static constexpr u32 NUM_POINTS = 384; /* technically 1024 */
 
-ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
-                            double delta, double epsilon, double min_ratio,
-                            double max_ratio);
+ndarray<u8> construct_graph_2d(ndarray<double> q_pts, ndarray<double> k_pts,
+                               double delta, double epsilon, double min_ratio,
+                               double max_ratio);
+ndarray<u8> construct_graph_3d(ndarray<double> q_pts, ndarray<double> k_pts,
+                               double delta, double epsilon, double min_ratio,
+                               double max_ratio);
 
 #endif

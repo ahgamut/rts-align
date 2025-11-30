@@ -7,7 +7,7 @@ import cliquematch
 import pandas as pd
 
 #
-from rts_align import construct_graph
+from rts_align import construct_graph_2d
 from rts_align import KabschEstimate
 from rts_align import find_clique
 

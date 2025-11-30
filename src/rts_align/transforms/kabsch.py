@@ -19,7 +19,6 @@ class KabschEstimate:
 
     @staticmethod
     def find_coefs(src, dst):
-        coefs = np.zeros((3, 2), dtype=np.float32)
         # kabsch algorithm to get rotation & translation
         # https://en.wikipedia.org/wiki/Kabsch_algorithm
         # following Umeyama's variant to calculate scale
@@ -27,6 +26,7 @@ class KabschEstimate:
         dst_cent, dst_norm = centerify(dst)
         n = src.shape[0]
         m = src.shape[1]
+        coefs = np.zeros((m+1, m), dtype=np.float32)
 
         src_var = np.mean(np.linalg.norm(src_norm, axis=1) ** 2)
         dst_var = np.mean(np.linalg.norm(dst_norm, axis=1) ** 2)
@@ -45,14 +45,13 @@ class KabschEstimate:
         # print(scale, rotmat, shift)
 
         coefs[0, :] = shift
-        coefs[1, :] = rotmat[0, :]
-        coefs[2, :] = rotmat[1, :]
+        coefs[1:, :] = rotmat
         return coefs
 
     def __call__(self, pt):
         arr = np.zeros(len(self.coefs), dtype=np.float32)
-        arr[-3] = 1
-        arr[-2:] = pt
+        arr[0] = 1
+        arr[1:] = pt
         return np.matmul(arr, self.coefs)
 
     def return_call_pieces(self):

@@ -1,7 +1,7 @@
 import time
 import numpy as np
 import cliquematch
-from rts_align.core import construct_graph
+from rts_align.core import construct_graph_2d, construct_graph_3d
 
 
 def strip_graph(mat0, k):
@@ -80,9 +80,14 @@ def find_clique(q_pts, k_pts, delta=0.01, epsilon=0.1, lower_bound=3, heuristic=
     # timer
     start_time = time.time()
 
-    res_basic = construct_graph(
-        q_pts, k_pts, delta=delta, epsilon=epsilon, max_ratio=10, min_ratio=0.1
-    )
+    if q_pts.shape[1] == 2:
+        res_basic = construct_graph_2d(
+            q_pts, k_pts, delta=delta, epsilon=epsilon, max_ratio=10, min_ratio=0.1
+        )
+    else:
+        res_basic = construct_graph_3d(
+            q_pts, k_pts, delta=delta, epsilon=epsilon, max_ratio=10, min_ratio=0.1
+        )
 
     # timer
     mid_time = time.time()
@@ -110,7 +115,7 @@ def find_all_cliques(
     qlen = len(q_pts)
     klen = len(k_pts)
 
-    res_basic = construct_graph(
+    res_basic = construct_graph_2d(
         q_pts, k_pts, delta=delta, epsilon=epsilon, max_ratio=2.5, min_ratio=1 / 2.5
     )
     res_basic = res_basic != 0

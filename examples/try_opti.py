@@ -5,7 +5,7 @@ import numpy as np
 import cliquematch
 
 #
-from rts_align import construct_graph
+from rts_align import construct_graph_2d
 from rts_align import KabschEstimate
 from rts_align.transforms.kabsch import _affine
 from scipy.spatial.distance import cdist

@@ -10,7 +10,7 @@ import time
 import cliquematch
 
 #
-from rts_align import construct_graph
+from rts_align import construct_graph_2d
 from rts_align import KabschEstimate
 from rts_align import find_clique
 from rts_align.clq import get_clique
@@ -50,7 +50,7 @@ def clipperp_estim(q_pts, k_pts, delta, epsilon):
 
     # timer
     start_time = time.time()
-    adjmat = construct_graph(
+    adjmat = construct_graph_2d(
         q_pts, k_pts, delta=delta, epsilon=epsilon, max_ratio=10, min_ratio=0.1
     )
 

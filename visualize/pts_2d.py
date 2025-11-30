@@ -15,7 +15,7 @@ import cliquematch
 
 
 #
-from rts_align import construct_graph
+from rts_align import construct_graph_2d
 from rts_align import KabschEstimate
 
 #
@@ -75,7 +75,7 @@ def show_points(Q, K, Q_corr, K_corr, clq, adjmat, filename=None):
 
 def find_clique(q_pts, k_pts, delta=5, epsilon=0.1):
     res = (
-        construct_graph(q_pts, k_pts, delta, epsilon, min_ratio=0.95, max_ratio=1.05)
+        construct_graph_2d(q_pts, k_pts, delta, epsilon, min_ratio=0.95, max_ratio=1.05)
         != 0
     )
     G = cliquematch.Graph.from_matrix(res)

@@ -10,7 +10,7 @@ import time
 import cliquematch
 
 #
-from rts_align import construct_graph_2d
+from rts_align import construct_graph_3d
 from rts_align import KabschEstimate
 from rts_align import find_clique
 from rts_align.clq import get_clique
@@ -31,12 +31,12 @@ import teaserpp_python
 
 
 def generate_points(n, md=10):
-    pts = np.zeros((n, 2))
-    pts[0] = np.random.uniform(-500, 500, 2)
+    pts = np.zeros((n, 3))
+    pts[0] = np.random.uniform(-500, 500, 3)
     for i in range(1, n):
-        pt = [0, 0]
+        pt = [0, 0, 0]
         while True:
-            pt = np.random.uniform(-500, 500, 2)
+            pt = np.random.uniform(-500, 500, 3)
             dist = np.apply_along_axis(lambda x: np.linalg.norm(x - pt), 1, pts[:i, :])
             if np.min(dist) > md:
                 pts[i] = pt
@@ -44,8 +44,22 @@ def generate_points(n, md=10):
     return pts
 
 
-def rigid_form(pts, theta, d):
-    rotmat = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
+def make_rotmat():
+    v = np.random.normal(0, 1, 4)
+    q = v / np.linalg.norm(v)
+    q *= np.sign(q[0])
+    q0, q1, q2, q3 = q
+
+    R = [
+        [2 * (q0**2 + q1**2) - 1, 2 * (q1 * q2 - q0 * q3), 2 * (q1 * q3 + q0 * q2)],
+        [2 * (q1 * q2 + q0 * q3), 2 * (q0**2 + q2**2) - 1, 2 * (q2 * q3 - q0 * q1)],
+        [2 * (q1 * q3 - q0 * q2), 2 * (q2 * q3 + q0 * q1), 2 * (q0**2 + q3**2) - 1],
+    ]
+    R = np.array(R)
+    return q, R
+
+
+def rigid_form(pts, rotmat, d):
     return np.matmul(pts, rotmat) + d
 
 
@@ -56,8 +70,8 @@ def make_p3d_list(arr, msize):
     N = len(arr)
     res = []
     for i in range(N):
-        x, y = (arr[i, :]) / (1.2 * msize)  # all values inside [-1, 1]
-        res.append(py_goicp.POINT3D(x, y, 0.0))
+        x, y, z = (arr[i, :]) / (1.2 * msize)  # all values inside [-1, 1]
+        res.append(py_goicp.POINT3D(x, y, z))
     return N, res
 
 
@@ -78,8 +92,8 @@ def goicp_estim(q_pts, k_pts, outlier_frac):
 
     end_time = time.time()
     scale = np.linalg.det(mod.optimalRotation())
-    rotmat = np.array(mod.optimalRotation())[:2, :2]
-    trans0 = np.array(mod.optimalTranslation())[:2] * 1.2 * msize
+    rotmat = np.array(mod.optimalRotation())
+    trans0 = np.array(mod.optimalTranslation()) * 1.2 * msize
     transl = -np.matmul(rotmat.T, trans0)
 
     sol = dict()
@@ -88,6 +102,7 @@ def goicp_estim(q_pts, k_pts, outlier_frac):
     sol["goicp_theta2"] = np.arctan2(rotmat.T[0, 1], rotmat.T[0, 0])
     sol["goicp_dx"] = transl[0]
     sol["goicp_dy"] = transl[1]
+    sol["goicp_dz"] = transl[2]
     sol["goicp_time"] = float(end_time - start_time)
     return sol
 
@@ -108,8 +123,8 @@ def goicp_estim2(q_pts, k_pts, outlier_frac, scale):
     mod.Register()
 
     end_time = time.time()
-    rotmat = np.array(mod.optimalRotation())[:2, :2]
-    trans0 = np.array(mod.optimalTranslation())[:2] * 1.2 * msize
+    rotmat = np.array(mod.optimalRotation())
+    trans0 = np.array(mod.optimalTranslation()) * 1.2 * msize
     transl = -np.matmul(rotmat.T, trans0)
 
     sol = dict()
@@ -118,6 +133,7 @@ def goicp_estim2(q_pts, k_pts, outlier_frac, scale):
     sol["goicp-scaled_theta2"] = np.arctan2(rotmat.T[0, 1], rotmat.T[0, 0])
     sol["goicp-scaled_dx"] = transl[0]
     sol["goicp-scaled_dy"] = transl[1]
+    sol["goicp-scaled_dz"] = transl[2]
     sol["goicp-scaled_time"] = float(end_time - start_time)
     return sol
 
@@ -132,7 +148,7 @@ def clipperp_estim(q_pts, k_pts, delta, epsilon):
 
     # timer
     start_time = time.time()
-    adjmat = construct_graph_2d(
+    adjmat = construct_graph_3d(
         q_pts, k_pts, delta=delta, epsilon=epsilon, max_ratio=10, min_ratio=0.1
     )
 
@@ -155,13 +171,14 @@ def clipperp_estim(q_pts, k_pts, delta, epsilon):
     tform = KabschEstimate(kc, qc)
     transl_est = tform.coefs[0, :]
     theta_est = np.arctan2(tform.coefs[1, 1], tform.coefs[1, 0])
-    zoom_est = np.sqrt(np.linalg.det(tform.coefs[1:, :]))
+    zoom_est = np.linalg.det(tform.coefs[1:, :]) ** ( 1/ 3)
 
     sol = dict()
     sol["clipperp_zoom"] = zoom_est
     sol["clipperp_theta"] = theta_est
     sol["clipperp_dx"] = transl_est[0]
     sol["clipperp_dy"] = transl_est[1]
+    sol["clipperp_dz"] = transl_est[2]
     sol["clipperp_time"] = float(tm["end"] - tm["start"])
     sol["clipperp_time-clq"] = float(tm["end"] - tm["mid"])
     sol["clipperp_time-graph"] = float(tm["mid"] - tm["start"])
@@ -172,8 +189,8 @@ def clipperp_estim(q_pts, k_pts, delta, epsilon):
 
 
 def teaser_estim(q_pts, k_pts, noise_range):
-    dst = np.column_stack([q_pts, 0 * np.ones(len(q_pts))]).T
-    src = np.column_stack([k_pts, 0 * np.ones(len(k_pts))]).T
+    dst = q_pts.T
+    src = k_pts.T
 
     solver_params = teaserpp_python.RobustRegistrationSolver.Params()
     solver_params.cbar2 = 1
@@ -207,6 +224,7 @@ def teaser_estim(q_pts, k_pts, noise_range):
     sol["teaser_theta2"] = np.arctan2(rotmat.T[1, 0], rotmat.T[1, 1])
     sol["teaser_dx"] = solution.translation[0]
     sol["teaser_dy"] = solution.translation[1]
+    sol["teaser_dz"] = solution.translation[2]
     sol["teaser_time"] = float(end - start)
     return sol
 
@@ -231,13 +249,14 @@ def rts_estim(q_pts, k_pts, delta, epsilon):
 
     transl_est = tform.coefs[0, :]
     theta_est = np.arctan2(tform.coefs[1, 1], tform.coefs[1, 0])
-    zoom_est = np.sqrt(np.linalg.det(tform.coefs[1:, :]))
+    zoom_est = np.linalg.det(tform.coefs[1:, :]) ** (1/3)
 
     sol = dict()
     sol["rts_zoom"] = zoom_est
     sol["rts_theta"] = theta_est
     sol["rts_dx"] = transl_est[0]
     sol["rts_dy"] = transl_est[1]
+    sol["rts_dz"] = transl_est[2]
     sol["rts_time"] = float(tm["end"] - tm["start"])
     sol["rts_time-clq"] = float(tm["end"] - tm["mid"])
     sol["rts_time-graph"] = float(tm["mid"] - tm["start"])
@@ -252,9 +271,9 @@ def attempt(num_K, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1):
 
     # randomly select R/T/S
     zoom = np.random.uniform(1 / 5.2, 5.2)
-    theta = np.pi * np.round(np.random.uniform(-1, 1), 5)
-    translation = np.random.randint(-75, 75, 2)
-    q_pts = rigid_form(k_pts[:num_K, :] * zoom, theta, translation)
+    theta, rotmat = make_rotmat()
+    translation = np.random.randint(-75, 75, 3)
+    q_pts = rigid_form(k_pts[:num_K, :] * zoom, rotmat, translation)
 
     # add extra points
     if num_extra != 0:
@@ -262,7 +281,7 @@ def attempt(num_K, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1):
         q_pts = np.row_stack([q_pts, q_extra])
 
     # add noise
-    q_pts = q_pts + noise_range * np.random.normal(0, 1, (len(q_pts), 2))
+    q_pts = q_pts + noise_range * np.random.normal(0, 1, (len(q_pts), 3))
     k_pts = k_pts
 
     # mappings that require correspondence
@@ -288,9 +307,10 @@ def attempt(num_K, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1):
     res["epsilon"] = epsilon
     res["g-noise"] = noise_range
     res["zoom"] = zoom
-    res["theta"] = theta
+    res["theta"] = theta[0]
     res["dx"] = translation[0]
     res["dy"] = translation[1]
+    res["dz"] = translation[2]
 
     res.update(sol_teaser1)
     res.update(sol_teaser2)
@@ -336,13 +356,13 @@ def main():
     result = []
     i = 0
     while i < d.simulations:
-        try:
-            print(i, file=sys.stderr)
-            r = attempt(d.num_K, d.num_extra, d.noise_add, d.delta, d.epsilon)
-            result.append(r)
-        except Exception as e:
-            print("attempt failure", i, e)
-            i -= 1
+        #try:
+        print(i, file=sys.stderr)
+        r = attempt(d.num_K, d.num_extra, d.noise_add, d.delta, d.epsilon)
+        result.append(r)
+        # except Exception as e:
+        #    print("attempt failure", i, e)
+        #    i -= 1
         i += 1
 
     df = pd.DataFrame(result)

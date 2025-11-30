@@ -236,7 +236,6 @@ struct Triple {
         check[4] = BINARY_CMP(4, other, delta, epsilon);
         check[5] = BINARY_CMP(5, other, delta, epsilon);
     };
-
 };
 
 static void invert_combi(int n, int i, Triple *t, Point *p) {
@@ -265,9 +264,9 @@ static void invert_combi(int n, int i, Triple *t, Point *p) {
     t[ii].construct(x, y, z, p[x], p[y], p[z]);
 }
 
-ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
-                            double delta, double epsilon, double min_ratio,
-                            double max_ratio) {
+ndarray<u8> construct_graph_2d(ndarray<double> q_pts, ndarray<double> k_pts,
+                               double delta, double epsilon, double min_ratio,
+                               double max_ratio) {
     /* set ratios before anything */
     MIN_RATIO = min_ratio;
     MAX_RATIO = max_ratio;
@@ -353,13 +352,13 @@ ndarray<u8> construct_graph(ndarray<double> q_pts, ndarray<double> k_pts,
         }
 
 #if ADJMAT_THREAD_SAFE
-#define ADD_ADJMAT_EDGE(a1, a2, b1, b2)                                \
-    __atomic_store_n(                                                  \
-        adjmat + ((a1)*klen + (a2)) * matsize + ((b1)*klen + (b2)), 1, \
+#define ADD_ADJMAT_EDGE(a1, a2, b1, b2)                                    \
+    __atomic_store_n(                                                      \
+        adjmat + ((a1) * klen + (a2)) * matsize + ((b1) * klen + (b2)), 1, \
         __ATOMIC_SEQ_CST);
 #else
 #define ADD_ADJMAT_EDGE(a1, a2, b1, b2) \
-    adjmat[((a1)*klen + (a2)) * matsize + ((b1)*klen + (b2))] = 1;
+    adjmat[((a1) * klen + (a2)) * matsize + ((b1) * klen + (b2))] = 1;
 #endif
 
         /* construct the correspondence graph */
