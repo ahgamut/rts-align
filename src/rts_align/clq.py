@@ -1,7 +1,8 @@
 import time
 import numpy as np
 import cliquematch
-from rts_align.core import construct_graph_2d, construct_graph_3d
+from rts_align.core import construct_graph_2d, construct_graph_3d, construct_graph
+from sklearn.metrics import pairwise_distances
 
 
 def strip_graph(mat0, k):
@@ -79,15 +80,17 @@ def find_clique(q_pts, k_pts, delta=0.01, epsilon=0.1, lower_bound=3, heuristic=
 
     # timer
     start_time = time.time()
+    q_dist = pairwise_distances(q_pts, metric="euclidean")
+    k_dist = pairwise_distances(k_pts, metric="euclidean")
 
-    if q_pts.shape[1] == 2:
-        res_basic = construct_graph_2d(
-            q_pts, k_pts, delta=delta, epsilon=epsilon, max_ratio=10, min_ratio=0.1
-        )
-    else:
-        res_basic = construct_graph_3d(
-            q_pts, k_pts, delta=delta, epsilon=epsilon, max_ratio=10, min_ratio=0.1
-        )
+    res_basic = construct_graph(
+        q_pts,
+        k_pts,
+        q_dist,
+        k_dist,
+        epsilon,
+        False,
+    )
 
     # timer
     mid_time = time.time()

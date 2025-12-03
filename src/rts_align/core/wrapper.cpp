@@ -13,5 +13,9 @@ PYBIND11_MODULE(core, m) {
           py::arg("delta") = 5e-3, py::arg("epsilon") = 0.1,  //
           py::arg("min_ratio") = MIN_RATIO_DEFAULT,           //
           py::arg("max_ratio") = MAX_RATIO_DEFAULT);
-
+    m.def("construct_graph", &construct_graph,
+          "Construct the graph from points with distance matrices",
+          py::arg("q_pts"), py::arg("k_pts"),    //
+          py::arg("q_dist"), py::arg("k_dist"),  //
+          py::arg("epsilon") = 0.1, py::arg("distances_are_cosine") = false);             //
 }
