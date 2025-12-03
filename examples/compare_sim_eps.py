@@ -196,8 +196,7 @@ def main():
             r = attempt(d.num_K, d.num_extra, d.noise_add, d.delta, d.epsilon)
             result.append(r)
         except Exception as e:
-            print("attempt failure", i, e)
-            i -= 1
+            print("attempt failure", i, e, file=sys.stderr)
         i += 1
 
     df = pd.DataFrame(result)
