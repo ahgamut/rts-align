@@ -126,9 +126,15 @@ struct Triple {
         this->valid = this->valid && CHECK_CLAMPED_RAW(bs);
         this->valid = this->valid && CHECK_CLAMPED_RAW(cs);
         if (this->valid) {
+#ifdef USING_LOGSCALE
             this->at = std::log(as) - std::log(bs);
             this->bt = std::log(bs) - std::log(cs);
             this->ct = std::log(cs) - std::log(as);
+#else
+            this->at = as / bs;
+            this->bt = bs / cs;
+            this->ct = cs / as;
+#endif
         }
     }
 
