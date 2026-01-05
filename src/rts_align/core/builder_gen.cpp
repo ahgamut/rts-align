@@ -102,9 +102,19 @@ struct Triple {
         this->k = kk;
         this->inited = 1;
         //
-        this->at = dist(ii, jj);
-        this->bt = dist(jj, kk);
-        this->ct = dist(kk, ii);
+        const u32 dim = pts.get_ncols();
+        double as = 0.0;
+        double bs = 0.0;
+        double cs = 0.0;
+        for (u32 d = 0; d < dim; ++d) {
+            as += (pts(ii, d) - pts(jj, d)) * (pts(jj, d) - pts(kk, d));
+            bs += (pts(jj, d) - pts(kk, d)) * (pts(kk, d) - pts(ii, d));
+            cs += (pts(kk, d) - pts(ii, d)) * (pts(ii, d) - pts(jj, d));
+        }
+        this->at = as / (dist(ii, jj) * dist(jj, kk));
+        this->bt = bs / (dist(jj, kk) * dist(kk, ii));
+        this->ct = cs / (dist(kk, ii) * dist(ii, jj));
+        //
         this->valid = 1;
         this->valid = this->valid && CHECK_CLAMPED_COS(at);
         this->valid = this->valid && CHECK_CLAMPED_COS(bt);
@@ -118,9 +128,11 @@ struct Triple {
         this->j = jj;
         this->k = kk;
         this->inited = 1;
+        //
         double as = dist(ii, jj);
         double bs = dist(jj, kk);
         double cs = dist(kk, ii);
+        //
         this->valid = 1;
         this->valid = this->valid && CHECK_CLAMPED_RAW(as);
         this->valid = this->valid && CHECK_CLAMPED_RAW(bs);
@@ -215,7 +227,7 @@ struct Triple {
 
 static void invert_combi(int n, int i, Triple *t,  //
                          RawNDArray &pts, RawNDArray &dist,
-                         bool distancesAreCosine) {
+                         bool calculateCosineDistance) {
     int x = 0;
     int y = 0;
     int z = 0;
@@ -238,7 +250,7 @@ static void invert_combi(int n, int i, Triple *t,  //
 
     y = (x + 1) + y;
     z = (y + 1) + i;
-    if (distancesAreCosine) {
+    if (calculateCosineDistance) {
         t[ii].construct_at(x, y, z, pts, dist);
     } else {
         t[ii].construct_st(x, y, z, pts, dist);
@@ -247,7 +259,7 @@ static void invert_combi(int n, int i, Triple *t,  //
 
 ndarray<u8> construct_graph(ndarray<double> q_pts0, ndarray<double> k_pts0,
                             ndarray<double> q_dist0, ndarray<double> k_dist0,
-                            double epsilon, bool distancesAreCosine) {
+                            double epsilon, bool calculateCosineDistance) {
     /* check array shapes */
     RawNDArray q_pts = getRawAfterCheck(q_pts0, q_pts0.shape(1));
     RawNDArray q_dist = getRawAfterCheck(q_dist0, q_pts.get_nrows());
@@ -287,7 +299,7 @@ ndarray<u8> construct_graph(ndarray<double> q_pts0, ndarray<double> k_pts0,
             /* fill the first set of triples */
 #pragma omp for
             for (ix = 0; ix < M; ++ix) {
-                invert_combi(qlen, ix, qt, q_pts, q_dist, distancesAreCosine);
+                invert_combi(qlen, ix, qt, q_pts, q_dist, calculateCosineDistance);
             }
 
 #pragma omp for reduction(+ : valid_M)
@@ -298,7 +310,7 @@ ndarray<u8> construct_graph(ndarray<double> q_pts0, ndarray<double> k_pts0,
             /* fill the second set of triples */
 #pragma omp for
             for (iy = 0; iy < N; ++iy) {
-                invert_combi(klen, iy, kt, k_pts, k_dist, distancesAreCosine);
+                invert_combi(klen, iy, kt, k_pts, k_dist, calculateCosineDistance);
             }
 
 #pragma omp for reduction(+ : valid_N)

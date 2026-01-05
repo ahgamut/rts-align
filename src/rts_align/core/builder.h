@@ -31,8 +31,8 @@ static constexpr double MIN_RATIO_DEFAULT = 0.5;
 static constexpr double MAX_RATIO_DEFAULT = 2.5;
 static constexpr double MIN_DIST = 1e-2;
 static constexpr double MAX_DIST = 1e8;
-static constexpr double MIN_COSINE_DIST = 1e-3;
-static constexpr double MAX_COSINE_DIST = 2.0;
+static constexpr double MIN_COSINE_DIST = -1.0;
+static constexpr double MAX_COSINE_DIST = 1.0;
 static constexpr double PI = 3.14159265358979;
 static constexpr u32 NUM_POINTS = 384; /* technically 1024 */
 
@@ -44,6 +44,6 @@ ndarray<u8> construct_graph_3d(ndarray<double> q_pts, ndarray<double> k_pts,
                                double max_ratio);
 ndarray<u8> construct_graph(ndarray<double> q_pts0, ndarray<double> k_pts0,
                             ndarray<double> q_dist0, ndarray<double> k_dist0,
-                            double epsilon, bool distancesAreCosine);
+                            double epsilon, bool calculateCosineDistance);
 
 #endif

@@ -17,5 +17,5 @@ PYBIND11_MODULE(core, m) {
           "Construct the graph from points with distance matrices",
           py::arg("q_pts"), py::arg("k_pts"),    //
           py::arg("q_dist"), py::arg("k_dist"),  //
-          py::arg("epsilon") = 0.1, py::arg("distances_are_cosine") = false);             //
+          py::arg("epsilon") = 0.1, py::arg("use_cosine_distance") = false);             //
 }

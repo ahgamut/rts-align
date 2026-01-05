@@ -47,7 +47,7 @@ def rigid_form(pts, rotmat, d):
 ###
 
 
-def clipperp_estim(q_pts, k_pts, delta, epsilon):
+def clipperp_estim(q_pts, k_pts, delta, epsilon, use_cosine_distance):
     delta = delta * np.pi / 180.0
     qlen = len(q_pts)
     klen = len(k_pts)
@@ -56,7 +56,7 @@ def clipperp_estim(q_pts, k_pts, delta, epsilon):
     start_time = time.time()
     q_dist = pairwise_distances(q_pts, metric="euclidean")
     k_dist = pairwise_distances(k_pts, metric="euclidean")
-    adjmat = construct_graph(q_pts, k_pts, q_dist, k_dist, epsilon, False)
+    adjmat = construct_graph(q_pts, k_pts, q_dist, k_dist, epsilon, use_cosine_distance)
 
     # timer
     mid_time = time.time()
@@ -93,14 +93,19 @@ def clipperp_estim(q_pts, k_pts, delta, epsilon):
 #####
 
 
-def rts_estim(q_pts, k_pts, delta, epsilon):
+def rts_estim(q_pts, k_pts, delta, epsilon, use_cosine_distance):
     # find corresponding points and visualize
     p = q_pts.shape[1]
     # number of parameters 1 + p + p(p-1)/2
     # each correspondence gives p equations
     lower_bound = int(np.ceil((1 + p + 0.5 * p * (p - 1)) / p))
     sol0 = find_clique(
-        q_pts, k_pts, delta=delta, epsilon=epsilon, lower_bound=lower_bound
+        q_pts,
+        k_pts,
+        delta=delta,
+        epsilon=epsilon,
+        lower_bound=3,
+        use_cosine_distance=use_cosine_distance,
     )
     qc, kc, tm = sol0["qc"], sol0["kc"], sol0["tm"]
     tform = KabschEstimate(kc, qc)
@@ -123,7 +128,15 @@ def rts_estim(q_pts, k_pts, delta, epsilon):
 #####
 
 
-def attempt(num_K, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1, dimension=2):
+def attempt(
+    num_K,
+    num_extra=0,
+    noise_range=1,
+    delta=0.1,
+    epsilon=0.1,
+    dimension=2,
+    use_cosine_distance=False,
+):
     k_pts = generate_points(num_K + num_extra, dimension)
 
     # randomly select R/T/S
@@ -146,8 +159,8 @@ def attempt(num_K, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1, dimension
     np.random.shuffle(k_pts)
 
     # mappings that don't require correspondence
-    sol_clipperp = clipperp_estim(q_pts, k_pts, delta, epsilon)
-    sol_rts = rts_estim(q_pts, k_pts, delta, epsilon)
+    sol_clipperp = clipperp_estim(q_pts, k_pts, delta, epsilon, use_cosine_distance)
+    sol_rts = rts_estim(q_pts, k_pts, delta, epsilon, use_cosine_distance)
 
     # add entries
     res = dict()
@@ -200,8 +213,15 @@ def main():
         "--epsilon", default=0.1, help="epsilon tuning parameter", type=float
     )
     parser.add_argument(
+        "--use-cos",
+        action="store_true",
+        dest="use_cosine_distance",
+        help="use cosine distance",
+    )
+    parser.add_argument(
         "-o", "--output-csv", default="./sample.csv", help="output csv file"
     )
+    parser.set_defaults(use_cosine_distance=False)
 
     d = parser.parse_args()
     result = []
@@ -211,7 +231,13 @@ def main():
             print(i, file=sys.stderr)
             dimension = random.randint(d.min_dimension, d.max_dimension)
             r = attempt(
-                d.num_K, d.num_extra, d.noise_add, d.delta, d.epsilon, dimension
+                d.num_K,
+                d.num_extra,
+                d.noise_add,
+                d.delta,
+                d.epsilon,
+                dimension,
+                d.use_cosine_distance,
             )
             result.append(r)
         except Exception as e:

@@ -73,7 +73,15 @@ def get_clique(adjmat, lower_bound, upper_bound, heuristic=False):
     return c_sub
 
 
-def find_clique(q_pts, k_pts, delta=0.01, epsilon=0.1, lower_bound=3, heuristic=False):
+def find_clique(
+    q_pts,
+    k_pts,
+    delta=0.01,
+    epsilon=0.1,
+    lower_bound=3,
+    heuristic=False,
+    use_cosine_distance=False,
+):
     delta = delta * np.pi / 180.0
     qlen = len(q_pts)
     klen = len(k_pts)
