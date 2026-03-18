@@ -30,18 +30,25 @@ def get_clique(adjmat, lower_bound, upper_bound, heuristic=False):
     res1 = adjmat[G1_ind, :]
     res1 = res1[:, G1_ind]
     G1 = cliquematch.Graph.from_matrix(res1)
-    c1 = (
-        np.array(
-            G1.get_max_clique(
-                upper_bound=upper_bound,
-                lower_bound=lower_bound,
-                use_dfs=False,
-                use_heuristic=True,
-            ),
-            dtype=np.int32,
+    try:
+        c1 = (
+            np.array(
+                G1.get_max_clique(
+                    upper_bound=upper_bound,
+                    lower_bound=lower_bound,
+                    use_dfs=False,
+                    use_heuristic=True,
+                ),
+                dtype=np.int32,
+            )
+            - 1
         )
-        - 1
-    )
+    except Exception as e:
+        if heuristic:
+            raise e
+        else:
+            c1 = []
+    #
     if heuristic or (len(c1) == upper_bound):
         return G1_ind[c1]
     l1 = len(c1)
@@ -99,11 +106,12 @@ def find_clique(
         epsilon,
         False,
     )
+    np.fill_diagonal(res_basic, 0)
+    res_basic = res_basic != 0
+    res_basic = res_basic | res_basic.T
 
     # timer
     mid_time = time.time()
-
-    res_basic = res_basic != 0
 
     c = get_clique(
         res_basic, lower_bound, upper_bound=min(qlen, klen), heuristic=heuristic

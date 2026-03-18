@@ -104,7 +104,7 @@ def rts_estim(q_pts, k_pts, delta, epsilon, use_cosine_distance):
         k_pts,
         delta=delta,
         epsilon=epsilon,
-        lower_bound=3,
+        lower_bound=2,
         use_cosine_distance=use_cosine_distance,
     )
     qc, kc, tm = sol0["qc"], sol0["kc"], sol0["tm"]
