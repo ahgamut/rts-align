@@ -49,6 +49,27 @@ def rigid_form(pts, theta, d):
     return np.matmul(pts, rotmat) + d
 
 
+def ek_wrapper(_keys):
+
+    def error_wrapper(foo):
+
+        def wrapped(*a1, **a2):
+            sol = dict()
+            for k in _keys:
+                sol[k] = None
+            try:
+                s2 = foo(*a1, **a2)
+                for k, v in s2.items():
+                    sol[k] = v
+            except Exception as e:
+                print(foo, "failed:", type(e), e, file=sys.stderr)
+            return sol
+
+        return wrapped
+
+    return error_wrapper
+
+
 ###
 
 
@@ -60,7 +81,16 @@ def make_p3d_list(arr, msize):
         res.append(py_goicp.POINT3D(x, y, 0.0))
     return N, res
 
-
+@ek_wrapper(
+    _keys=[
+        "goicp_success",
+        "goicp_zoom",
+        "goicp_theta",
+        "goicp_dx",
+        "goicp_dy",
+        "goicp_time",
+    ]
+)
 def goicp_estim(q_pts, k_pts, outlier_frac):
     msize = max(np.max(np.abs(q_pts)), np.max(np.abs(k_pts)))
     Nq, qp = make_p3d_list(q_pts, msize)
@@ -83,6 +113,7 @@ def goicp_estim(q_pts, k_pts, outlier_frac):
     transl = -np.matmul(rotmat.T, trans0)
 
     sol = dict()
+    sol["goicp_success"] = True
     sol["goicp_zoom"] = scale
     sol["goicp_theta"] = np.arctan2(rotmat[0, 1], rotmat[0, 0])
     sol["goicp_theta2"] = np.arctan2(rotmat.T[0, 1], rotmat.T[0, 0])
@@ -92,6 +123,16 @@ def goicp_estim(q_pts, k_pts, outlier_frac):
     return sol
 
 
+@ek_wrapper(
+    _keys=[
+        "goicp-scaled_success",
+        "goicp-scaled_zoom",
+        "goicp-scaled_theta",
+        "goicp-scaled_dx",
+        "goicp-scaled_dy",
+        "goicp-scaled_time",
+    ]
+)
 def goicp_estim2(q_pts, k_pts, outlier_frac, scale):
     msize = max(np.max(np.abs(q_pts)), np.max(np.abs(k_pts * scale)))
     Nq, qp = make_p3d_list(q_pts, msize)
@@ -113,6 +154,7 @@ def goicp_estim2(q_pts, k_pts, outlier_frac, scale):
     transl = -np.matmul(rotmat.T, trans0)
 
     sol = dict()
+    sol["goicp-scaled_success"] = True
     sol["goicp-scaled_zoom"] = scale
     sol["goicp-scaled_theta"] = np.arctan2(rotmat[0, 1], rotmat[0, 0])
     sol["goicp-scaled_theta2"] = np.arctan2(rotmat.T[0, 1], rotmat.T[0, 0])
@@ -125,6 +167,16 @@ def goicp_estim2(q_pts, k_pts, outlier_frac, scale):
 ####
 
 
+@ek_wrapper(
+    _keys=[
+        "clipperp_success",
+        "clipperp_zoom",
+        "clipperp_theta",
+        "clipperp_dx",
+        "clipperp_dy",
+        "clipperp_time",
+    ]
+)
 def clipperp_estim(q_pts, k_pts, delta, epsilon):
     delta = delta * np.pi / 180.0
     qlen = len(q_pts)
@@ -158,6 +210,7 @@ def clipperp_estim(q_pts, k_pts, delta, epsilon):
     zoom_est = np.sqrt(np.linalg.det(tform.coefs[1:, :]))
 
     sol = dict()
+    sol["clipperp_success"] = True
     sol["clipperp_zoom"] = zoom_est
     sol["clipperp_theta"] = theta_est
     sol["clipperp_dx"] = transl_est[0]
@@ -171,6 +224,16 @@ def clipperp_estim(q_pts, k_pts, delta, epsilon):
 #####
 
 
+@ek_wrapper(
+    _keys=[
+        "teaser_success",
+        "teaser_zoom",
+        "teaser_theta",
+        "teaser_dx",
+        "teaser_dy",
+        "teaser_time",
+    ]
+)
 def teaser_estim(q_pts, k_pts, noise_range):
     dst = np.column_stack([q_pts, 0 * np.ones(len(q_pts))]).T
     src = np.column_stack([k_pts, 0 * np.ones(len(k_pts))]).T
@@ -201,6 +264,7 @@ def teaser_estim(q_pts, k_pts, noise_range):
     solution = solver.getSolution()
 
     sol = dict()
+    sol["teaser_success"] = True
     sol["teaser_zoom"] = solution.scale
     rotmat = solution.rotation[:2, :2]
     sol["teaser_theta"] = np.arctan2(rotmat[1, 0], rotmat[1, 1])
@@ -223,6 +287,16 @@ def teaser2_estim(q_pts, k_pts, noise_range):
 #####
 
 
+@ek_wrapper(
+    _keys=[
+        "rts_success",
+        "rts_zoom",
+        "rts_theta",
+        "rts_dx",
+        "rts_dy",
+        "rts_time",
+    ]
+)
 def rts_estim(q_pts, k_pts, delta, epsilon):
     # find corresponding points and visualize
     sol0 = find_clique(q_pts, k_pts, delta=delta, epsilon=epsilon)
@@ -234,6 +308,7 @@ def rts_estim(q_pts, k_pts, delta, epsilon):
     zoom_est = np.sqrt(np.linalg.det(tform.coefs[1:, :]))
 
     sol = dict()
+    sol["rts_success"] = True
     sol["rts_zoom"] = zoom_est
     sol["rts_theta"] = theta_est
     sol["rts_dx"] = transl_est[0]

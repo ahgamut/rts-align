@@ -45,8 +45,41 @@ def rigid_form(pts, rotmat, d):
 
 
 ###
+def ek_wrapper(_keys):
+
+    def error_wrapper(foo):
+
+        def wrapped(*a1, **a2):
+            sol = dict()
+            for k in _keys:
+                sol[k] = None
+            try:
+                s2 = foo(*a1, **a2)
+                for k, v in s2.items():
+                    sol[k] = v
+            except Exception as e:
+                print(foo, "failed:", type(e), e, file=sys.stderr)
+            return sol
+
+        return wrapped
+
+    return error_wrapper
 
 
+###
+
+
+@ek_wrapper(
+    _keys=[
+        "clipperp_success",
+        "clipperp_zoom",
+        "clipperp_rotation",
+        "clipperp_translation",
+        "clipperp_time",
+        "clipperp_time-clq",
+        "clipperp_time-graph",
+    ]
+)
 def clipperp_estim(q_pts, k_pts, delta, epsilon, use_cosine_distance):
     delta = delta * np.pi / 180.0
     qlen = len(q_pts)
@@ -81,6 +114,7 @@ def clipperp_estim(q_pts, k_pts, delta, epsilon, use_cosine_distance):
     rotmat /= zoom_est
 
     sol = dict()
+    sol["clipperp_success"] = clique_size
     sol["clipperp_zoom"] = zoom_est
     sol["clipperp_rotation"] = rotmat.tolist()
     sol["clipperp_translation"] = transl_est.tolist()
@@ -92,7 +126,17 @@ def clipperp_estim(q_pts, k_pts, delta, epsilon, use_cosine_distance):
 
 #####
 
-
+@ek_wrapper(
+    _keys=[
+        "rts_success",
+        "rts_zoom",
+        "rts_rotation",
+        "rts_translation",
+        "rts_time",
+        "rts_time-clq",
+        "rts_time-graph",
+    ]
+)
 def rts_estim(q_pts, k_pts, delta, epsilon, use_cosine_distance):
     # find corresponding points and visualize
     p = q_pts.shape[1]
@@ -116,6 +160,7 @@ def rts_estim(q_pts, k_pts, delta, epsilon, use_cosine_distance):
     rotmat /= zoom_est
 
     sol = dict()
+    sol["rts_success"] = len(qc)
     sol["rts_zoom"] = zoom_est
     sol["rts_rotation"] = rotmat.tolist()
     sol["rts_translation"] = transl_est.tolist()
