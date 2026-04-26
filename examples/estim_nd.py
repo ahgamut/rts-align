@@ -127,7 +127,7 @@ class RTS(BaseNDEstimator):
         super().__init__(params=["time-clq", "time-graph"])
         self.delta = delta
         self.epsilon = epsilon
-        self.use_heuristic = True
+        self.use_heuristic = False
 
     def _call_impl(self, q_pts, k_pts, *args, **kwargs):
         sol0 = find_clique(
@@ -136,6 +136,7 @@ class RTS(BaseNDEstimator):
             delta=self.delta,
             epsilon=self.epsilon,
             lower_bound=2,
+            heuristic=self.use_heuristic,
         )
         qc, kc, tm = sol0["qc"], sol0["kc"], sol0["tm"]
         tform = KabschEstimate(kc, qc)
@@ -163,7 +164,7 @@ class RTSHeuristic(BaseNDEstimator):
         super().__init__(params=["time-clq", "time-graph"])
         self.delta = delta
         self.epsilon = epsilon
-        self.use_heuristic = False
+        self.use_heuristic = True
 
     def _call_impl(self, q_pts, k_pts, *args, **kwargs):
         sol0 = find_clique(
@@ -172,6 +173,7 @@ class RTSHeuristic(BaseNDEstimator):
             delta=self.delta,
             epsilon=self.epsilon,
             lower_bound=2,
+            heuristic=self.use_heuristic,
         )
         qc, kc, tm = sol0["qc"], sol0["kc"], sol0["tm"]
         tform = KabschEstimate(kc, qc)
