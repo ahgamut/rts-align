@@ -55,7 +55,11 @@ class BaseNDEstimator:
             result[f"{e}_time"] = end - start
         except Exception as err:
             msg = traceback.format_exc()
-            print(f"estimation with {self.__estim_name__} failed with", msg)
+            print(
+                f"estimation with {self.__estim_name__} failed with",
+                msg,
+                file=sys.stderr,
+            )
             result[f"{e}_success"] = False
             result[f"{e}_time"] = 0.0
         return result
@@ -66,7 +70,7 @@ class CLIPPER(BaseNDEstimator):
 
     def __init__(self, delta, epsilon, min_ratio=0.1, max_ratio=10.0):
         super().__init__(params=["time-clq", "time-graph"])
-        self.delta = delta
+        self.delta = delta * np.pi / 180
         self.epsilon = epsilon
         self.min_ratio = min_ratio
         self.max_ratio = max_ratio
@@ -125,7 +129,7 @@ class RTS(BaseNDEstimator):
 
     def __init__(self, delta, epsilon):
         super().__init__(params=["time-clq", "time-graph"])
-        self.delta = delta
+        self.delta = delta * np.pi / 180
         self.epsilon = epsilon
         self.use_heuristic = False
 
@@ -162,7 +166,7 @@ class RTSHeuristic(BaseNDEstimator):
 
     def __init__(self, delta, epsilon):
         super().__init__(params=["time-clq", "time-graph"])
-        self.delta = delta
+        self.delta = delta * np.pi / 180
         self.epsilon = epsilon
         self.use_heuristic = True
 
