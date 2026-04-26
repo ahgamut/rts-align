@@ -9,18 +9,8 @@ import random
 from scipy.stats import special_ortho_group
 from sklearn.metrics import pairwise_distances
 
-# https://github.com/ahgamut/cliquematch/tree/devel
-import cliquematch
-
-#
-from rts_align.core import construct_graph
-from rts_align import KabschEstimate
-from rts_align import find_clique
-
-# https://github.com/ariarobotics/clipperp
-# a524943411bf6635219ab510864c81aa1b6a0c7a
-# (patch headers in python bindings)
-import clipperpluspy
+##
+from estim_nd import RTS, RTSHeuristic, CLIPPER
 
 
 def generate_points(n, k, md=10):
@@ -44,130 +34,21 @@ def rigid_form(pts, rotmat, d):
     return np.matmul(pts, rotmat) + d
 
 
-###
-def ek_wrapper(_keys):
-
-    def error_wrapper(foo):
-
-        def wrapped(*a1, **a2):
-            sol = dict()
-            for k in _keys:
-                sol[k] = None
-            try:
-                s2 = foo(*a1, **a2)
-                for k, v in s2.items():
-                    sol[k] = v
-            except Exception as e:
-                print(foo, "failed:", type(e), e, file=sys.stderr)
-            return sol
-
-        return wrapped
-
-    return error_wrapper
-
-
-###
-
-
-@ek_wrapper(
-    _keys=[
-        "clipperp_success",
-        "clipperp_zoom",
-        "clipperp_rotation",
-        "clipperp_translation",
-        "clipperp_time",
-        "clipperp_time-clq",
-        "clipperp_time-graph",
-    ]
-)
-def clipperp_estim(q_pts, k_pts, delta, epsilon, use_cosine_distance):
-    delta = delta * np.pi / 180.0
-    qlen = len(q_pts)
-    klen = len(k_pts)
-
-    # timer
-    start_time = time.time()
-    q_dist = pairwise_distances(q_pts, metric="euclidean")
-    k_dist = pairwise_distances(k_pts, metric="euclidean")
-    adjmat = construct_graph(q_pts, k_pts, q_dist, k_dist, epsilon, use_cosine_distance)
-
-    # timer
-    mid_time = time.time()
-
-    adjmat = np.int32(adjmat != 0)
-    adjmat = adjmat | adjmat.T
-    np.fill_diagonal(adjmat, 0)
-    clique_size, clique, certificate = clipperpluspy.clipperplus_clique(adjmat)
-
-    # timer
-    end_time = time.time()
-
-    clique = np.array(clique, dtype=np.int32)
-    qc = q_pts[clique // len(k_pts), :]
-    kc = k_pts[clique % len(k_pts), :]
-    tm = {"start": start_time, "mid": mid_time, "end": end_time}
-
-    tform = KabschEstimate(kc, qc)
-    transl_est = tform.coefs[0, :]
-    rotmat = tform.coefs[1:, :]
-    zoom_est = np.linalg.det(rotmat) ** (1 / len(transl_est))
-    rotmat /= zoom_est
-
-    sol = dict()
-    sol["clipperp_success"] = clique_size
-    sol["clipperp_zoom"] = zoom_est
-    sol["clipperp_rotation"] = rotmat.tolist()
-    sol["clipperp_translation"] = transl_est.tolist()
-    sol["clipperp_time"] = float(tm["end"] - tm["start"])
-    sol["clipperp_time-clq"] = float(tm["end"] - tm["mid"])
-    sol["clipperp_time-graph"] = float(tm["mid"] - tm["start"])
-    return sol
-
-
 #####
+def make_estims(d):
+    result = dict()
 
-@ek_wrapper(
-    _keys=[
-        "rts_success",
-        "rts_zoom",
-        "rts_rotation",
-        "rts_translation",
-        "rts_time",
-        "rts_time-clq",
-        "rts_time-graph",
+    outlier_frac = (1 + d.num_extra) / (1 + d.num_K + d.num_extra)
+
+    estim_objs = [
+        CLIPPER(delta=d.delta, epsilon=d.epsilon),
+        RTS(delta=d.delta, epsilon=d.epsilon),
+        RTSHeuristic(delta=d.delta, epsilon=d.epsilon),
     ]
-)
-def rts_estim(q_pts, k_pts, delta, epsilon, use_cosine_distance):
-    # find corresponding points and visualize
-    p = q_pts.shape[1]
-    # number of parameters 1 + p + p(p-1)/2
-    # each correspondence gives p equations
-    lower_bound = int(np.ceil((1 + p + 0.5 * p * (p - 1)) / p))
-    sol0 = find_clique(
-        q_pts,
-        k_pts,
-        delta=delta,
-        epsilon=epsilon,
-        lower_bound=2,
-        use_cosine_distance=use_cosine_distance,
-    )
-    qc, kc, tm = sol0["qc"], sol0["kc"], sol0["tm"]
-    tform = KabschEstimate(kc, qc)
 
-    transl_est = tform.coefs[0, :]
-    rotmat = tform.coefs[1:, :]
-    zoom_est = np.linalg.det(rotmat) ** (1 / len(transl_est))
-    rotmat /= zoom_est
-
-    sol = dict()
-    sol["rts_success"] = len(qc)
-    sol["rts_zoom"] = zoom_est
-    sol["rts_rotation"] = rotmat.tolist()
-    sol["rts_translation"] = transl_est.tolist()
-    sol["rts_time"] = float(tm["end"] - tm["start"])
-    sol["rts_time-clq"] = float(tm["end"] - tm["mid"])
-    sol["rts_time-graph"] = float(tm["mid"] - tm["start"])
-    return sol
+    for e in estim_objs:
+        result[e.__estim_name__] = e
+    return result
 
 
 #####
@@ -175,12 +56,12 @@ def rts_estim(q_pts, k_pts, delta, epsilon, use_cosine_distance):
 
 def attempt(
     num_K,
+    estims,
     num_extra=0,
     noise_range=1,
     delta=0.1,
     epsilon=0.1,
     dimension=2,
-    use_cosine_distance=False,
 ):
     k_pts = generate_points(num_K + num_extra, dimension)
 
@@ -204,8 +85,9 @@ def attempt(
     np.random.shuffle(k_pts)
 
     # mappings that don't require correspondence
-    sol_clipperp = clipperp_estim(q_pts, k_pts, delta, epsilon, use_cosine_distance)
-    sol_rts = rts_estim(q_pts, k_pts, delta, epsilon, use_cosine_distance)
+    sol_rts1 = estims["rts"](q_pts, k_pts, delta, epsilon)
+    sol_rts2 = estims["rts-heuristic"](q_pts, k_pts, delta, epsilon)
+    sol_clipperp = estims["clipperp"](q_pts, k_pts, delta, epsilon)
 
     # add entries
     res = dict()
@@ -220,7 +102,8 @@ def attempt(
     res["translation"] = translation.tolist()
 
     res.update(sol_clipperp)
-    res.update(sol_rts)
+    res.update(sol_rts1)
+    res.update(sol_rts2)
     print(res, file=sys.stderr)
     return res
 
@@ -258,17 +141,11 @@ def main():
         "--epsilon", default=0.1, help="epsilon tuning parameter", type=float
     )
     parser.add_argument(
-        "--use-cos",
-        action="store_true",
-        dest="use_cosine_distance",
-        help="use cosine distance",
-    )
-    parser.add_argument(
         "-o", "--output-csv", default="./sample.csv", help="output csv file"
     )
-    parser.set_defaults(use_cosine_distance=False)
 
     d = parser.parse_args()
+    estims = make_estims(d)
     result = []
     i = 0
     while i < d.simulations:
@@ -277,12 +154,12 @@ def main():
             dimension = random.randint(d.min_dimension, d.max_dimension)
             r = attempt(
                 d.num_K,
+                estims,
                 d.num_extra,
                 d.noise_add,
                 d.delta,
                 d.epsilon,
                 dimension,
-                d.use_cosine_distance,
             )
             result.append(r)
         except Exception as e:
