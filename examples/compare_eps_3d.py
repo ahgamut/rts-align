@@ -6,19 +6,7 @@ import numpy as np
 import pandas as pd
 import time
 
-# https://github.com/ahgamut/cliquematch/tree/devel
-import cliquematch
-
-#
-from rts_align import construct_graph_2d
-from rts_align import KabschEstimate
-from rts_align import find_clique
-from rts_align.clq import get_clique
-
-# https://github.com/ariarobotics/clipperp
-# a524943411bf6635219ab510864c81aa1b6a0c7a
-# (patch headers in python bindings)
-import clipperpluspy
+from estim_3d import RTS, RTSHeuristic, CLIPPER
 
 
 def generate_points(n, md=10):
@@ -71,135 +59,29 @@ def rigid_form(pts, rotmat, d):
     return np.matmul(pts, rotmat) + d
 
 
-def ek_wrapper(_keys):
-
-    def error_wrapper(foo):
-
-        def wrapped(*a1, **a2):
-            sol = dict()
-            for k in _keys:
-                sol[k] = None
-            try:
-                s2 = foo(*a1, **a2)
-                for k, v in s2.items():
-                    sol[k] = v
-            except Exception as e:
-                print(foo, "failed:", type(e), e, file=sys.stderr)
-            return sol
-
-        return wrapped
-
-    return error_wrapper
-
-
-###
-
-@ek_wrapper(
-    _keys=[
-        "clipperp_success",
-        "clipperp_zoom",
-        "clipperp_roll",
-        "clipperp_pitch",
-        "clipperp_yaw",
-        "clipperp_dx",
-        "clipperp_dy",
-        "clipperp_dz",
-        "clipperp_time",
-    ]
-)
-def clipperp_estim(q_pts, k_pts, delta, epsilon):
-    delta = delta * np.pi / 180.0
-    qlen = len(q_pts)
-    klen = len(k_pts)
-
-    # timer
-    start_time = time.time()
-    adjmat = construct_graph_3d(
-        q_pts, k_pts, delta=delta, epsilon=epsilon, max_ratio=10, min_ratio=0.1
-    )
-
-    # timer
-    mid_time = time.time()
-
-    adjmat = np.int32(adjmat != 0)
-    adjmat = adjmat | adjmat.T
-    np.fill_diagonal(adjmat, 0)
-    clique_size, clique, certificate = clipperpluspy.clipperplus_clique(adjmat)
-
-    # timer
-    end_time = time.time()
-
-    clique = np.array(clique, dtype=np.int32)
-    qc = q_pts[clique // len(k_pts), :]
-    kc = k_pts[clique % len(k_pts), :]
-    tm = {"start": start_time, "mid": mid_time, "end": end_time}
-
-    tform = KabschEstimate(kc, qc)
-    transl_est = tform.coefs[0, :]
-    rotmat = tform.coefs[1:, :]
-    roll, pitch, yaw = rotmat_to_angles(rotmat)
-    zoom_est = np.linalg.det(tform.coefs[1:, :]) ** (1 / 3)
-
-    sol = dict()
-    sol["clipperp_success"] = clique_size
-    sol["clipperp_zoom"] = zoom_est
-    sol["clipperp_roll"] = roll
-    sol["clipperp_pitch"] = pitch
-    sol["clipperp_yaw"] = yaw
-    sol["clipperp_dx"] = transl_est[0]
-    sol["clipperp_dy"] = transl_est[1]
-    sol["clipperp_dz"] = transl_est[2]
-    sol["clipperp_time"] = float(tm["end"] - tm["start"])
-    sol["clipperp_time-clq"] = float(tm["end"] - tm["mid"])
-    sol["clipperp_time-graph"] = float(tm["mid"] - tm["start"])
-    return sol
-
-
 #####
 
-@ek_wrapper(
-    _keys=[
-        "rts_success",
-        "rts_zoom",
-        "rts_roll",
-        "rts_pitch",
-        "rts_yaw",
-        "rts_dx",
-        "rts_dy",
-        "rts_dz",
-        "rts_time",
+
+def make_estims(d):
+    result = dict()
+
+    outlier_frac = (1 + d.num_extra) / (1 + d.num_K + d.num_extra)
+
+    estim_objs = [
+        CLIPPER(delta=d.delta, epsilon=d.epsilon),
+        RTS(delta=d.delta, epsilon=d.epsilon),
+        RTSHeuristic(delta=d.delta, epsilon=d.epsilon),
     ]
-)
-def rts_estim(q_pts, k_pts, delta, epsilon):
-    # find corresponding points and visualize
-    sol0 = find_clique(q_pts, k_pts, delta=delta, epsilon=epsilon)
-    qc, kc, tm = sol0["qc"], sol0["kc"], sol0["tm"]
-    tform = KabschEstimate(kc, qc)
 
-    transl_est = tform.coefs[0, :]
-    rotmat = tform.coefs[1:, :]
-    roll, pitch, yaw = rotmat_to_angles(rotmat)
-    zoom_est = np.linalg.det(tform.coefs[1:, :]) ** (1 / 3)
-
-    sol = dict()
-    sol["rts_success"] = len(qc)
-    sol["rts_zoom"] = zoom_est
-    sol["rts_roll"] = roll
-    sol["rts_pitch"] = pitch
-    sol["rts_yaw"] = yaw
-    sol["rts_dx"] = transl_est[0]
-    sol["rts_dy"] = transl_est[1]
-    sol["rts_dz"] = transl_est[2]
-    sol["rts_time"] = float(tm["end"] - tm["start"])
-    sol["rts_time-clq"] = float(tm["end"] - tm["mid"])
-    sol["rts_time-graph"] = float(tm["mid"] - tm["start"])
-    return sol
+    for e in estim_objs:
+        result[e.__estim_name__] = e
+    return result
 
 
 #####
 
 
-def attempt(num_K, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1):
+def attempt(num_K, estims, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1):
     k_pts = generate_points(num_K + num_extra)
 
     # randomly select R/T/S
@@ -223,8 +105,9 @@ def attempt(num_K, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1):
     np.random.shuffle(k_pts)
 
     # mappings that don't require correspondence
-    sol_rts = rts_estim(q_pts, k_pts, delta, epsilon)
-    sol_clipperp = clipperp_estim(q_pts, k_pts, delta, epsilon)
+    sol_rts1 = estims["rts"](q_pts, k_pts, delta, epsilon)
+    sol_rts2 = estims["rts-heuristic"](q_pts, k_pts, delta, epsilon)
+    sol_clipperp = estims["clipperp"](q_pts, k_pts, delta, epsilon)
 
     # add entries
     res = dict()
@@ -241,7 +124,8 @@ def attempt(num_K, num_extra=0, noise_range=1, delta=0.1, epsilon=0.1):
     res["dy"] = translation[1]
     res["dz"] = translation[2]
 
-    res.update(sol_rts)
+    res.update(sol_rts1)
+    res.update(sol_rts2)
     res.update(sol_clipperp)
     print(res, file=sys.stderr)
     return res
@@ -278,12 +162,13 @@ def main():
     )
 
     d = parser.parse_args()
+    estims = make_estims(d)
     result = []
     i = 0
     while i < d.simulations:
         try:
             print(i, file=sys.stderr)
-            r = attempt(d.num_K, d.num_extra, d.noise_add, d.delta, d.epsilon)
+            r = attempt(d.num_K, estims, d.num_extra, d.noise_add, d.delta, d.epsilon)
             result.append(r)
         except Exception as e:
             print("attempt failure", i, e, file=sys.stderr)
