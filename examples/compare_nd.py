@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import time
 import random
+import base64
 from scipy.stats import special_ortho_group
 from sklearn.metrics import pairwise_distances
 
@@ -107,6 +108,8 @@ def attempt(
     print(res, file=sys.stderr)
     return res
 
+def encodemat(mlist):
+    return base64.b32encode(str(mlist).encode("ascii"))
 
 def main():
     parser = argparse.ArgumentParser(
@@ -167,6 +170,10 @@ def main():
         i += 1
 
     df = pd.DataFrame(result)
+    for cname in df.columns:
+        if "translation" in cname or "rotation" in cname:
+            df[cname] = df[cname].apply(encodemat)
+
     df.to_csv(d.output_csv, index=False, header=True)
 
 
