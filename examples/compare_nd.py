@@ -108,8 +108,10 @@ def attempt(
     print(res, file=sys.stderr)
     return res
 
+
 def encodemat(mlist):
-    return base64.b32encode(str(mlist).encode("ascii"))
+    return base64.b32encode(str(mlist).encode("ascii")).hex()
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -138,10 +140,10 @@ def main():
         "-a", "--noise-add", default=0.01, help="add some gaussian noise", type=float
     )
     parser.add_argument(
-        "--delta", default=0.1, help="delta tuning parameter", type=float
+        "--delta", default=0.001, help="delta tuning parameter", type=float
     )
     parser.add_argument(
-        "--epsilon", default=0.1, help="epsilon tuning parameter", type=float
+        "--epsilon", default=0.001, help="epsilon tuning parameter", type=float
     )
     parser.add_argument(
         "-o", "--output-csv", default="./sample.csv", help="output csv file"
