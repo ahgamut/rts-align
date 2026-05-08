@@ -175,6 +175,8 @@ def main():
         i += 1
 
     df = pd.DataFrame(result)
+    cnames = list(sorted(df.columns))
+    df = df[cnames]
     df.to_csv(d.output_csv, index=False, header=True)
 
 
