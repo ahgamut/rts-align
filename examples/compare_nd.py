@@ -172,10 +172,12 @@ def main():
         i += 1
 
     df = pd.DataFrame(result)
-    for cname in df.columns:
+    cnames = list(sorted(df.columns))
+    for cname in cnames:
         if "translation" in cname or "rotation" in cname:
             df[cname] = df[cname].apply(encodemat)
 
+    df = df[cnames]
     df.to_csv(d.output_csv, index=False, header=True)
 
 

@@ -33,9 +33,11 @@ class BaseNDEstimator:
         params = params - self.__aux_params__
         e = self.__estim_name__
         self._dummy_result = dict()
+        self._dummy_result[f"{e}_zoom"] = 0.0
+        self._dummy_result[f"{e}_rotation"] = [0.0]
+        self._dummy_result[f"{e}_translation"] = [0.0]
         self._dummy_params = set()
         for k in params:
-            self._dummy_result[f"{e}_{k}"] = 0.0
             self._dummy_params.add(f"{e}_{k}")
         self._dummy_result[f"{e}_success"] = False
 
