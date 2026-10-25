@@ -8,6 +8,9 @@ import time
 import traceback
 from sklearn.metrics import pairwise_distances
 
+# https://github.com/CSAFE-ISU/shoecomp-plus-plus
+import aligncalc
+
 # https://github.com/ahgamut/cliquematch/tree/devel
 import cliquematch
 
@@ -130,21 +133,25 @@ class RTS(BaseNDEstimator):
     __estim_name__ = "rts"
 
     def __init__(self, delta, epsilon):
-        super().__init__(params=["time-clq", "time-graph"])
-        self.delta = delta * np.pi / 180
+        super().__init__(params=["time-graph"])
+        self.delta = delta
         self.epsilon = epsilon
         self.use_heuristic = False
 
     def _call_impl(self, q_pts, k_pts, *args, **kwargs):
-        sol0 = find_clique(
+        tm = dict(start = time.time())
+        sol = aligncalc.match_points(
             q_pts,
             k_pts,
-            delta=self.delta,
+            mode="rts",
+            scale_range=5,
+            results=1,
+            workers=0,
             epsilon=self.epsilon,
-            lower_bound=2,
-            heuristic=self.use_heuristic,
+            anchor_tol=self.delta,
         )
-        qc, kc, tm = sol0["qc"], sol0["kc"], sol0["tm"]
+        tm["end"] = time.time()
+        qc, kc = sol[0].left_points, sol[0].right_points
         tform = KabschEstimate(kc, qc)
 
         transl_est = tform.coefs[0, :]
@@ -158,8 +165,7 @@ class RTS(BaseNDEstimator):
         sol[f"{e}_zoom"] = zoom_est
         sol[f"{e}_rotation"] = rotmat.tolist()
         sol[f"{e}_translation"] = transl_est.tolist()
-        sol[f"{e}_time-clq"] = float(tm["end"] - tm["mid"])
-        sol[f"{e}_time-graph"] = float(tm["mid"] - tm["start"])
+        sol[f"{e}_time-graph"] = float(tm["end"] - tm["start"])
         return sol
 
 

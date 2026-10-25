@@ -7,6 +7,9 @@ import pandas as pd
 import time
 import traceback
 
+# https://github.com/CSAFE-ISU/shoecomp-plus-plus
+import aligncalc
+
 # https://github.com/ahgamut/cliquematch/tree/devel
 import cliquematch
 
@@ -296,20 +299,25 @@ class RTS(Base3DEstimator):
     __estim_name__ = "rts"
 
     def __init__(self, delta, epsilon):
-        super().__init__(params=["time-clq", "time-graph"])
-        self.delta = delta * np.pi / 180
+        super().__init__(params=["time-graph"])
+        self.delta = delta
         self.epsilon = epsilon
         self.use_heuristic = False
 
     def _call_impl(self, q_pts, k_pts, *args, **kwargs):
-        sol0 = find_clique(
+        tm = dict(start = time.time())
+        sol = aligncalc.match_points(
             q_pts,
             k_pts,
-            delta=self.delta,
+            mode="rts",
+            scale_range=5,
+            results=1,
+            workers=0,
             epsilon=self.epsilon,
-            heuristic=self.use_heuristic,
+            anchor_tol=self.delta,
         )
-        qc, kc, tm = sol0["qc"], sol0["kc"], sol0["tm"]
+        tm["end"] = time.time()
+        qc, kc = sol[0].left_points, sol[0].right_points
         tform = KabschEstimate(kc, qc)
 
         transl_est = tform.coefs[0, :]
@@ -326,10 +334,8 @@ class RTS(Base3DEstimator):
         sol[f"{e}_dx"] = transl_est[0]
         sol[f"{e}_dy"] = transl_est[1]
         sol[f"{e}_dz"] = transl_est[2]
-        sol[f"{e}_time-clq"] = float(tm["end"] - tm["mid"])
-        sol[f"{e}_time-graph"] = float(tm["mid"] - tm["start"])
+        sol[f"{e}_time-graph"] = float(tm["end"] - tm["start"])
         return sol
-
 
 class RTSHeuristic(Base3DEstimator):
     __estim_name__ = "rts-heuristic"
